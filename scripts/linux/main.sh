@@ -16,9 +16,9 @@ mkdir -p "$DOWNLOAD_DIR"
 
 # 定义依赖脚本和配置文件的 URL 和文件名
 DEPENDENCIES=(
-    "kejilion_functions.sh|https://example.com/kejilion_functions.sh"
-    "kejilion_other.sh|https://example.com/kejilion_other.sh"
-    "tag-config.yml|https://example.com/tag-config.yml"  # 配置文件
+    "kejilion.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/kejilion.sh"
+    "k_info.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/k_info.sh"
+    "tag-config.yml|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/config/tag-config.yml"  # 配置文件
 )
 
 # 下载依赖脚本和配置文件到指定目录
@@ -84,13 +84,14 @@ load_modules() {
 
 # 1. 加载核心初始化模块
 source "$DOWNLOAD_DIR/kejilion.sh"
-if declare -f init_env > /dev/null; then
-    echo "运行初始化逻辑..."
-    init_env  # 调用初始化函数
-else
-    echo "初始化模块未正确加载，退出。"
-    exit 1
-fi
+# 测试里面是否有init_env函数
+# if declare -f init_env > /dev/null; then
+#     echo "运行初始化逻辑..."
+#     init_env  # 调用初始化函数
+# else
+#     echo "初始化模块未正确加载，退出。"
+#     exit 1
+# fi
 
 
 
@@ -382,11 +383,5 @@ kejilion_sh() {
 }
 
 # 1. 加载kejilion_sh()函数后面的脚本
-source "$DOWNLOAD_DIR/kejilion.sh"
-if declare -f init_env > /dev/null; then
-    echo "运行初始化逻辑..."
-    init_env  # 调用初始化函数
-else
-    echo "初始化模块未正确加载，退出。"
-    exit 1
-fi
+source "$DOWNLOAD_DIR/k_info.sh"
+
