@@ -1,5 +1,22 @@
 #!/bin/bash
 
+
+log_file="/var/log/my_script.log"
+
+log() {
+    local message="$1"
+    # 将信息写入日志文件，并且加上时间戳
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$log_file"
+}
+
+log "脚本开始执行"
+
+# 假设执行某个命令
+echo "Hello, World!"
+log "Hello, World! 命令已执行"
+
+
+
 # 默认存放目录（如果用户未指定目录）
 DEFAULT_DIR="$HOME/.kejilion"
 DOWNLOAD_DIR="${1:-$DEFAULT_DIR}"  # 如果提供参数，则使用参数作为目录；否则使用默认目录。
@@ -496,3 +513,4 @@ kejilion_sh() {
 # 1. 加载kejilion_sh()函数后面的脚本
 source "$DOWNLOAD_DIR/k_info.sh"
 
+log "脚本执行完毕"
