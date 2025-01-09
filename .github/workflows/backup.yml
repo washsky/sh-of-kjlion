@@ -44,7 +44,6 @@ jobs:
       id: update_config
       run: |
 
-
         # 加载配置文件
         config_file="config/tag-config.yml"
         if [ ! -f "$config_file" ]; then
@@ -59,9 +58,13 @@ jobs:
         update=$(yq '.update' "$config_file")
         release_notes=$(yq '.release_notes' "$config_file")
 
-        # 确保 major 和 minor 是整数，patch 是浮点数
-        if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-          echo "Invalid version numbers in config file. Ensure major, minor are integers and patch is a float."
+        # 确保 major 和 minor 是整数，patch 是浮点数或整数
+        if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ ]]; then
+          echo "Invalid version numbers: major and minor must be integers."
+          exit 1
+        fi
+        if ! [[ $patch =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+          echo "Invalid patch number: patch must be an integer or a float."
           exit 1
         fi
 
@@ -70,14 +73,14 @@ jobs:
           "major")
             major=$((major + 1))
             minor=0
-            patch=0.0
+            patch=0
             ;;
           "minor")
             minor=$((minor + 1))
-            patch=0.0
+            patch=0
             ;;
           "patch")
-            patch=$(echo "$patch + 0.1" | bc)  # 使用 bc 处理浮点数
+            patch=$(awk "BEGIN {print $patch + 0.1}")  # 使用 awk 处理浮点数递增
             ;;
           *)
             echo "Unknown update type: $update"
@@ -94,7 +97,11 @@ jobs:
         printf "release_notes<<EOF\n%s\nEOF\n" "$release_notes" >> $GITHUB_ENV
 
         # 更新配置文件中的版本信息
-        yq -i ".major = $major | .minor = $minor | .patch = $patch" "$config_file"
+        yq -i "
+          .major = $major |
+          .minor = $minor |
+          .patch = $patch
+        " "$config_file"
 
         # 提交更新的配置文件
         git config user.name "github-actions[bot]"
