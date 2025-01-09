@@ -274,7 +274,7 @@ kejilion_update() {
 
     # 清理临时配置文件
     rm -f "$temp_config_file"
-    rm -rf "$temp_dir"  # 清理临时下载目录
+    #rm -rf "$temp_dir"  # 清理临时下载目录
 }
 
 
