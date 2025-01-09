@@ -43,31 +43,27 @@ jobs:
     - name: Load and update tag configuration
       id: update_config
       run: |
-
+    
         # 加载配置文件
         config_file="config/tag-config.yml"
         if [ ! -f "$config_file" ]; then
           echo "Configuration file not found: $config_file"
           exit 1
         fi
-
+    
         # 提取版本信息
         major=$(yq '.major' "$config_file")
         minor=$(yq '.minor' "$config_file")
         patch=$(yq '.patch' "$config_file")
         update=$(yq '.update' "$config_file")
         release_notes=$(yq '.release_notes' "$config_file")
-
-        # 确保 major 和 minor 是整数，patch 是浮点数或整数
-        if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ ]]; then
-          echo "Invalid version numbers: major and minor must be integers."
+    
+        # 确保 major, minor, 和 patch 都是整数
+        if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
+          echo "Invalid version numbers: major, minor, and patch must all be integers."
           exit 1
         fi
-        if ! [[ $patch =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-          echo "Invalid patch number: patch must be an integer or a float."
-          exit 1
-        fi
-
+    
         # 根据 update 类型更新版本号
         case "$update" in
           "major")
@@ -80,29 +76,29 @@ jobs:
             patch=0
             ;;
           "patch")
-            patch=$(awk "BEGIN {print $patch + 0.1}")  # 使用 awk 处理浮点数递增
+            patch=$((patch + 1))  # 使用整数递增
             ;;
           *)
             echo "Unknown update type: $update"
             exit 1
             ;;
         esac
-
+    
         # 格式化新版本号
         new_version="v$major.$minor.$patch"
-
+    
         # 输出新版本号和发布说明到环境变量
         echo "New version: $new_version"
         echo "new_version=$new_version" >> $GITHUB_ENV
         printf "release_notes<<EOF\n%s\nEOF\n" "$release_notes" >> $GITHUB_ENV
-
+    
         # 更新配置文件中的版本信息
         yq -i "
           .major = $major |
           .minor = $minor |
           .patch = $patch
         " "$config_file"
-
+    
         # 提交更新的配置文件
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -110,7 +106,7 @@ jobs:
         git commit -m "Update tag-config.yml to version $new_version"
         git push
 
-
+ 
     # 5. 运行测试和质量检查
 
     # 6. 创建并推送标签
