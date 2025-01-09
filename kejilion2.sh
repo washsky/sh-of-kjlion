@@ -1,5 +1,5 @@
 #!/bin/bash
-sh_v="3.5.8"
+sh_v="3.5.9"
 
 
 gl_hui='\e[37m'
@@ -5807,6 +5807,7 @@ linux_panel() {
 	  echo -e "${gl_kjlan}49.  ${gl_bai}普罗米修斯(容器监控)		 ${gl_kjlan}50.  ${gl_bai}补货监控工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}51.  ${gl_bai}PVE开小鸡面板			 ${gl_kjlan}52.  ${gl_bai}DPanel容器管理面板"
+	  echo -e "${gl_kjlan}53.  ${gl_bai}ollama聊天AI大模型"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}0.   ${gl_bai}返回主菜单"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -6638,7 +6639,7 @@ linux_panel() {
 
 		  28)
 			local docker_name="speedtest"
-			local docker_img="lscr.io/linuxserver/librespeed:latest"
+			local docker_img="ghcr.io/librespeed/speedtest"
 			local docker_port=8028
 			local docker_rum="docker run -d -p 8028:8080 --name speedtest --restart always ghcr.io/librespeed/speedtest"
 			local docker_describe="librespeed是用Javascript实现的轻量级速度测试工具，即开即用"
@@ -7105,7 +7106,17 @@ linux_panel() {
 			docker_app
 			  ;;
 
-
+		  53)
+			local docker_name="ollama"
+			local docker_img="ghcr.io/open-webui/open-webui:Ollama"
+			local docker_port=8053
+			local docker_rum="docker run -d -p 8053:8080 -v /home/docker/ollama:/root/.ollama -v /home/docker/ollama/open-webui:/app/backend/data --name ollama --restart always ghcr.io/open-webui/open-webui:ollama"
+			local docker_describe="OpenWebUI一款大语言模型网页框架，接入全新的llama3大语言模型"
+			local docker_url="官网介绍: https://github.com/open-webui/open-webui"
+			local docker_use="docker exec ollama ollama run llama3"
+			local docker_passwd=""
+			docker_app
+			  ;;
 
 		  0)
 			  kejilion
@@ -8671,151 +8682,6 @@ EOF
 
 
 
-cluster_python3() {
-	install python3 python3-paramiko
-	cd ~/cluster/
-	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/python-for-vps/main/cluster/$py_task
-	python3 ~/cluster/$py_task
-}
-
-
-run_commands_on_servers() {
-	
-	local SERVERS_FILE="$HOME/cluster/servers.py"
-	local SERVERS=$(grep -oP '{"name": "\K[^"]+|"hostname": "\K[^"]+|"port": \K[^,]+|"username": "\K[^"]+|"password": "\K[^"]+' "$SERVERS_FILE")
-
-	# 将提取的信息转换为数组
-	IFS=$'\n' read -r -d '' -a SERVER_ARRAY <<< "$SERVERS"
-
-	# 遍历服务器并执行命令
-	for ((i=0; i<${#SERVER_ARRAY[@]}; i+=5)); do
-		local name=${SERVER_ARRAY[i]}
-		local hostname=${SERVER_ARRAY[i+1]}
-		local port=${SERVER_ARRAY[i+2]}
-		local username=${SERVER_ARRAY[i+3]}
-		local password=${SERVER_ARRAY[i+4]}
-		echo
-		echo -e "${gl_huang}连接到 $name ($hostname)...${gl_bai}"
-		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
-		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
-	done
-	echo
-	break_end
-
-}
-
-
-linux_cluster() {
-mkdir cluster
-if [ ! -f ~/cluster/servers.py ]; then
-	cat > ~/cluster/servers.py << EOF
-servers = [
-
-]
-EOF
-fi
-
-while true; do
-	  clear
-	  send_stats "集群控制中心"
-	  echo "集群服务器列表"
-	  cat ~/cluster/servers.py
-
-	  echo ""
-	  echo "操作"
-	  echo "------------------------"
-	  echo "服务器列表管理"
-	  echo "1. 添加服务器                2. 删除服务器             3. 编辑服务器"
-	  echo "4. 备份集群                  5. 还原集群"
-	  echo "------------------------"
-	  echo "批量执行任务"
-	  echo "11. 安装科技lion脚本         12. 更新系统              13. 清理系统"
-	  echo "14. 安装docker               15. 安装BBR3              16. 设置1G虚拟内存"
-	  echo "17. 设置时区到上海           18. 开放所有端口	       51. 自定义指令"
-	  echo "------------------------"
-	  echo "0. 返回上一级选单"
-	  echo "------------------------"
-	  read -e -p "请输入你的选择: " sub_choice
-
-	  case $sub_choice in
-		  1)
-			  send_stats "添加集群服务器"
-			  read -e -p "服务器名称: " server_name
-			  read -e -p "服务器IP: " server_ip
-			  read -e -p "服务器端口（22）: " server_port
-			  local server_port=${server_port:-22}
-			  read -e -p "服务器用户名（root）: " server_username
-			  local server_username=${server_username:-root}
-			  read -e -p "服务器用户密码: " server_password
-
-			  sed -i "/servers = \[/a\    {\"name\": \"$server_name\", \"hostname\": \"$server_ip\", \"port\": $server_port, \"username\": \"$server_username\", \"password\": \"$server_password\", \"remote_path\": \"/home/\"}," ~/cluster/servers.py
-
-			  ;;
-		  2)
-			  send_stats "删除集群服务器"
-			  read -e -p "请输入需要删除的关键字: " rmserver
-			  sed -i "/$rmserver/d" ~/cluster/servers.py
-			  ;;
-		  3)
-			  send_stats "编辑集群服务器"
-			  install nano
-			  nano ~/cluster/servers.py
-			  ;;
-
-		  4)
-			  clear
-			  send_stats "备份集群"
-			  echo -e "请将 ${gl_huang}/root/cluster/servers.py${gl_bai} 文件下载，完成备份！"
-			  break_end
-			  ;;
-
-		  5)
-			  clear
-			  send_stats "还原集群"
-			  echo "请上传您的servers.py，按任意键开始上传！"
-			  echo -e "请上传您的 ${gl_huang}servers.py${gl_bai} 文件到 ${gl_huang}/root/cluster/${gl_bai} 完成还原！"
-			  break_end
-			  ;;
-
-		  11)
-			  local py_task="install_kejilion.py"
-			  cluster_python3
-			  ;;
-		  12)
-			  run_commands_on_servers "k update"
-			  ;;
-		  13)
-			  run_commands_on_servers "k clean"
-			  ;;
-		  14)
-			  run_commands_on_servers "k docker install"
-			  ;;
-		  15)
-			  run_commands_on_servers "k bbr3"
-			  ;;
-		  16)
-			  run_commands_on_servers "k swap 1024"
-			  ;;
-		  17)
-			  run_commands_on_servers "k time Asia/Shanghai"
-			  ;;
-		  18)
-			  run_commands_on_servers "k iptables_open"
-			  ;;
-
-		  51)
-			  send_stats "自定义执行命令"
-			  read -e -p "请输入批量执行的命令: " mingling
-			  run_commands_on_servers "${mingling}"
-			  ;;
-
-		  *)
-			  kejilion
-			  ;;
-	  esac
-done
-
-}
 
 
 
@@ -9026,127 +8892,149 @@ EOF
 
 
 
-# kejilion_update() {
-
-# 	send_stats "脚本更新"
-# 	cd ~
-# 	clear
-# 	echo "更新日志"
-# 	echo "------------------------"
-# 	echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
-# 	echo "------------------------"
-
-# 	curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
-# 	local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
-
-# 	if [ "$sh_v" = "$sh_v_new" ]; then
-# 		echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
-# 		send_stats "脚本已经最新了，无需更新"
-# 	else
-# 		echo "发现新版本！"
-# 		echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
-# 		echo "------------------------"
-# 		read -e -p "确定更新脚本吗？(Y/N): " choice
-# 		case "$choice" in
-# 			[Yy])
-# 				clear
-# 				local country=$(curl -s ipinfo.io/country)
-# 				if [ "$country" = "CN" ]; then
-# 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
-# 				else
-# 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
-# 				fi
-# 				canshu_v6
-# 				CheckFirstRun_true
-# 				yinsiyuanquan2
-# 				cp -f ~/kejilion.sh /usr/local/bin/k > /dev/null 2>&1
-# 				echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
-# 				send_stats "脚本已经最新$sh_v_new"
-# 				break_end
-# 				~/kejilion.sh
-# 				exit
-# 				;;
-# 			[Nn])
-# 				echo "已取消"
-# 				;;
-# 			*)
-# 				;;
-# 		esac
-# 	fi
-
-
-# }
-
-
-
-kejilion_update() {
-    send_stats "脚本更新"
-    cd ~
-    clear
-    echo "更新日志"
-    echo "------------------------"
-    echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
-    echo "------------------------"
-
-    curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
-    local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
-
-    if [ "$sh_v" = "$sh_v_new" ]; then
-        echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
-        send_stats "脚本已经最新了，无需更新"
-    else
-        echo "发现新版本！"
-        echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
-        echo "------------------------"
-        read -e -p "确定更新脚本吗？(Y/N): " choice
-        case "$choice" in
-            [Yy])
-                clear
-                local country=$(curl -s ipinfo.io/country)
-                local download_url
-
-                if [ "$country" = "CN" ]; then
-                    download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh"
-                else
-                    download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"
-                fi
-
-                # 下载新脚本
-                if ! curl -sS -o kejilion.sh "$download_url"; then
-                    echo "下载新脚本失败，请检查网络连接。"
-                    exit 1
-                fi
-
-                chmod +x kejilion.sh
-
-                # 备份当前脚本
-                cp /usr/local/bin/k /usr/local/bin/k.bak
-
-                # 覆盖当前脚本
-                if cp -f kejilion.sh /usr/local/bin/k; then
-                    echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
-                    send_stats "脚本已经更新到最新版本 v$sh_v_new"
-
-                    # 使用 exec 重新执行脚本，替代当前进程
-                    exec /usr/local/bin/k
-                else
-                    echo "更新失败，无法写入 /usr/local/bin/k。"
-                    echo "已恢复备份。"
-                    cp /usr/local/bin/k.bak /usr/local/bin/k
-                    exit 1
-                fi
-                ;;
-            [Nn])
-                echo "已取消"
-                ;;
-            *)
-                echo "无效的选择，已取消更新。"
-                ;;
-        esac
-    fi
+cluster_python3() {
+	install python3 python3-paramiko
+	cd ~/cluster/
+	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/python-for-vps/main/cluster/$py_task
+	python3 ~/cluster/$py_task
 }
 
 
+run_commands_on_servers() {
+
+	local SERVERS_FILE="$HOME/cluster/servers.py"
+	local SERVERS=$(grep -oP '{"name": "\K[^"]+|"hostname": "\K[^"]+|"port": \K[^,]+|"username": "\K[^"]+|"password": "\K[^"]+' "$SERVERS_FILE")
+
+	# 将提取的信息转换为数组
+	IFS=$'\n' read -r -d '' -a SERVER_ARRAY <<< "$SERVERS"
+
+	# 遍历服务器并执行命令
+	for ((i=0; i<${#SERVER_ARRAY[@]}; i+=5)); do
+		local name=${SERVER_ARRAY[i]}
+		local hostname=${SERVER_ARRAY[i+1]}
+		local port=${SERVER_ARRAY[i+2]}
+		local username=${SERVER_ARRAY[i+3]}
+		local password=${SERVER_ARRAY[i+4]}
+		echo
+		echo -e "${gl_huang}连接到 $name ($hostname)...${gl_bai}"
+		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
+		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
+	done
+	echo
+	break_end
+
+}
+
+
+linux_cluster() {
+mkdir cluster
+if [ ! -f ~/cluster/servers.py ]; then
+	cat > ~/cluster/servers.py << EOF
+servers = [
+
+]
+EOF
+fi
+
+while true; do
+	  clear
+	  send_stats "集群控制中心"
+	  echo "集群服务器列表"
+	  cat ~/cluster/servers.py
+	  echo
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}服务器列表管理${gl_bai}"
+	  echo -e "${gl_kjlan}1.  ${gl_bai}添加服务器               ${gl_kjlan}2.  ${gl_bai}删除服务器            ${gl_kjlan}3.  ${gl_bai}编辑服务器"
+	  echo -e "${gl_kjlan}4.  ${gl_bai}备份集群                 ${gl_kjlan}5.  ${gl_bai}还原集群"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}批量执行任务${gl_bai}"
+	  echo -e "${gl_kjlan}11. ${gl_bai}安装科技lion脚本         ${gl_kjlan}12. ${gl_bai}更新系统              ${gl_kjlan}13. ${gl_bai}清理系统"
+	  echo -e "${gl_kjlan}14. ${gl_bai}安装docker               ${gl_kjlan}15. ${gl_bai}安装BBR3              ${gl_kjlan}16. ${gl_bai}设置1G虚拟内存"
+	  echo -e "${gl_kjlan}17. ${gl_bai}设置时区到上海           ${gl_kjlan}18. ${gl_bai}开放所有端口	       ${gl_kjlan}51. ${gl_bai}自定义指令"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}0.  ${gl_bai}返回上一级选单"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  read -e -p "请输入你的选择: " sub_choice
+
+	  case $sub_choice in
+		  1)
+			  send_stats "添加集群服务器"
+			  read -e -p "服务器名称: " server_name
+			  read -e -p "服务器IP: " server_ip
+			  read -e -p "服务器端口（22）: " server_port
+			  local server_port=${server_port:-22}
+			  read -e -p "服务器用户名（root）: " server_username
+			  local server_username=${server_username:-root}
+			  read -e -p "服务器用户密码: " server_password
+
+			  sed -i "/servers = \[/a\    {\"name\": \"$server_name\", \"hostname\": \"$server_ip\", \"port\": $server_port, \"username\": \"$server_username\", \"password\": \"$server_password\", \"remote_path\": \"/home/\"}," ~/cluster/servers.py
+
+			  ;;
+		  2)
+			  send_stats "删除集群服务器"
+			  read -e -p "请输入需要删除的关键字: " rmserver
+			  sed -i "/$rmserver/d" ~/cluster/servers.py
+			  ;;
+		  3)
+			  send_stats "编辑集群服务器"
+			  install nano
+			  nano ~/cluster/servers.py
+			  ;;
+
+		  4)
+			  clear
+			  send_stats "备份集群"
+			  echo -e "请将 ${gl_huang}/root/cluster/servers.py${gl_bai} 文件下载，完成备份！"
+			  break_end
+			  ;;
+
+		  5)
+			  clear
+			  send_stats "还原集群"
+			  echo "请上传您的servers.py，按任意键开始上传！"
+			  echo -e "请上传您的 ${gl_huang}servers.py${gl_bai} 文件到 ${gl_huang}/root/cluster/${gl_bai} 完成还原！"
+			  break_end
+			  ;;
+
+		  11)
+			  local py_task="install_kejilion.py"
+			  cluster_python3
+			  ;;
+		  12)
+			  run_commands_on_servers "k update"
+			  ;;
+		  13)
+			  run_commands_on_servers "k clean"
+			  ;;
+		  14)
+			  run_commands_on_servers "k docker install"
+			  ;;
+		  15)
+			  run_commands_on_servers "k bbr3"
+			  ;;
+		  16)
+			  run_commands_on_servers "k swap 1024"
+			  ;;
+		  17)
+			  run_commands_on_servers "k time Asia/Shanghai"
+			  ;;
+		  18)
+			  run_commands_on_servers "k iptables_open"
+			  ;;
+
+		  51)
+			  send_stats "自定义执行命令"
+			  read -e -p "请输入批量执行的命令: " mingling
+			  run_commands_on_servers "${mingling}"
+			  ;;
+
+		  *)
+			  kejilion
+			  ;;
+	  esac
+done
+
+}
 
 
 
@@ -9196,299 +9084,126 @@ echo ""
 }
 
 
-# kejilion_sh() {
-# while true; do
-# clear
-# echo -e "${gl_kjlan}"
-# echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
-# echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
-# echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
-# echo -e "科技lion脚本工具箱 v$sh_v"
-# echo -e "命令行输入${gl_huang}k${gl_kjlan}可快速启动脚本${gl_bai}"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}1.   ${gl_bai}系统信息查询"
-# echo -e "${gl_kjlan}2.   ${gl_bai}系统更新"
-# echo -e "${gl_kjlan}3.   ${gl_bai}系统清理"
-# echo -e "${gl_kjlan}4.   ${gl_bai}基础工具 ▶"
-# echo -e "${gl_kjlan}5.   ${gl_bai}BBR管理 ▶"
-# echo -e "${gl_kjlan}6.   ${gl_bai}Docker管理 ▶ "
-# echo -e "${gl_kjlan}7.   ${gl_bai}WARP管理 ▶ "
-# echo -e "${gl_kjlan}8.   ${gl_bai}测试脚本合集 ▶ "
-# echo -e "${gl_kjlan}9.   ${gl_bai}甲骨文云脚本合集 ▶ "
-# echo -e "${gl_huang}10.  ${gl_bai}LDNMP建站 ▶ "
-# echo -e "${gl_kjlan}11.  ${gl_bai}应用市场 ▶ "
-# echo -e "${gl_kjlan}12.  ${gl_bai}我的工作区 ▶ "
-# echo -e "${gl_kjlan}13.  ${gl_bai}系统工具 ▶ "
-# echo -e "${gl_kjlan}14.  ${gl_bai}服务器集群控制 ▶ "
-# echo -e "${gl_kjlan}15.  ${gl_bai}广告专栏"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}p.   ${gl_bai}幻兽帕鲁开服脚本 ▶"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}00.  ${gl_bai}脚本更新"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}0.   ${gl_bai}退出脚本"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# read -e -p "请输入你的选择: " choice
-
-# case $choice in
-#   1) linux_ps ;;
-#   2) clear ; send_stats "系统更新" ; linux_update ;;
-#   3) clear ; send_stats "系统清理" ; linux_clean ;;
-#   4) linux_tools ;;
-#   5) linux_bbr ;;
-#   6) linux_docker ;;
-#   7) clear ; send_stats "warp管理" ; install wget
-# 	wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh ; bash menu.sh [option] [lisence/url/token]
-# 	;;
-#   8) linux_test ;;
-#   9) linux_Oracle ;;
-#   10) linux_ldnmp ;;
-#   11) linux_panel ;;
-#   12) linux_work ;;
-#   13) linux_Settings ;;
-#   14) linux_cluster ;;
-#   15) kejilion_Affiliates ;;
-#   p) send_stats "幻兽帕鲁开服脚本" ; cd ~
-# 	 curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/palworld.sh ; chmod +x palworld.sh ; ./palworld.sh
-# 	 exit
-# 	 ;;
-#   00) kejilion_update ;;
-#   0) clear ; exit ;;
-#   *) echo "无效的输入!" ;;
-# esac
-# 	break_end
-# done
-# }
 
 
 
+kejilion_update() {
+
+	send_stats "脚本更新"
+	cd ~
+	clear
+	echo "更新日志"
+	echo "------------------------"
+	echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
+	echo "------------------------"
+
+	curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
+	local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
+
+	if [ "$sh_v" = "$sh_v_new" ]; then
+		echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
+		send_stats "脚本已经最新了，无需更新"
+	else
+		echo "发现新版本！"
+		echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
+		echo "------------------------"
+		read -e -p "确定更新脚本吗？(Y/N): " choice
+		case "$choice" in
+			[Yy])
+				clear
+				local country=$(curl -s ipinfo.io/country)
+				if [ "$country" = "CN" ]; then
+					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
+				else
+					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
+				fi
+				canshu_v6
+				CheckFirstRun_true
+				yinsiyuanquan2
+				cp -f ~/kejilion.sh /usr/local/bin/k > /dev/null 2>&1
+				echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
+				send_stats "脚本已经最新$sh_v_new"
+				break_end
+				~/kejilion.sh
+				exit
+				;;
+			[Nn])
+				echo "已取消"
+				;;
+			*)
+				;;
+		esac
+	fi
 
 
-
-
-
-
-
-
-# 定义"a"颜色变量
-gl_orange="\033[1;33m"  # 橙色（通常用黄色近似表示）
-gl_reset="\033[0m"      # 重置颜色
-
-kejilion_sh() { 
-    # 最小高度要求
-    local min_height=30  # 最小高度需求，包含菜单和底部提示区域
-
-    # 初始化 end_line
-    local end_line=0
-
-    # 检查终端高度
-    check_terminal_height() {
-        local current_height=$(tput lines)
-        if [ "$current_height" -lt "$min_height" ]; then
-            tput clear
-            echo -e "\033[1;31m当前终端高度不足！\033[0m"
-            echo -e "请调整终端窗口高度至少为 \033[1;32m$min_height\033[0m 行。"
-            echo -e "当前终端高度：\033[1;33m$current_height\033[0m 行。"
-            echo -e "请调整后重新运行脚本。"
-            exit 1
-        fi
-    }
-
-    # 检查终端高度
-    check_terminal_height
-
-    # 初始化选项
-    options=(
-        "1. 系统信息查询"
-        "2. 系统更新"
-        "3. 系统清理"
-        "4. 基础工具 ▶"
-        "5. BBR管理 ▶"
-        "6. Docker管理 ▶"
-        "7. WARP管理 ▶"
-        "8. 测试脚本合集 ▶"
-        "9. 甲骨文云脚本合集 ▶"
-        "a. LDNMP建站 ▶"
-        "y. 应用市场 ▶"
-        "w. 我的工作区 ▶"
-        "x. 系统工具 ▶"
-        "f. 服务器集群控制 ▶"
-        "g. 广告专栏"
-        "p. 幻兽帕鲁开服脚本 ▶"
-        "u. 脚本更新"
-        "0. 退出脚本"
-    )
-    actions=(
-        "linux_ps"
-        "clear ; send_stats '系统更新' ; linux_update"
-        "clear ; send_stats '系统清理' ; linux_clean"
-        "linux_tools"
-        "linux_bbr"
-        "linux_docker"
-        "clear ; send_stats 'warp管理' ; install wget; wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh ; bash menu.sh [option] [lisence/url/token]"
-        "linux_test"
-        "linux_Oracle"
-        "linux_ldnmp"
-        "linux_panel"
-        "linux_work"
-        "linux_Settings"
-        "linux_cluster"
-        "kejilion_Affiliates"
-        "send_stats '幻兽帕鲁开服脚本' ; cd ~; curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/palworld.sh ; chmod +x palworld.sh ; ./palworld.sh"
-        "kejilion_update"
-        "exit"  # 修改这里，从 "clear ; exit" 到 "exit"
-    )
-
-    current_selection=0  # 当前选中的选项索引
-
-    # 绘制标题部分（固定不动）
-    draw_title() {
-        tput clear
-        echo -e "${gl_kjlan}"
-        echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
-        echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
-        echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
-        echo -e "科技lion脚本工具箱 v$sh_v"
-        echo -e "命令行输入${gl_huang}k${gl_kjlan}可快速启动脚本${gl_bai}"
-        echo -e "${gl_kjlan}------------------------${gl_bai}"
-    }
-
-    # 绘制底部虚线和提示文本
-    draw_footer() {
-        local footer_text="${gl_kjlan}------------------------${gl_bai}"
-        local hint_color="${gl_kjlan}"  # 与虚线颜色一致
-        tput cup $((7 + ${#options[@]})) 0  # 定位到菜单最后一个选项的下一行
-        echo -e "$footer_text"
-
-        # 提示文本分为三行，使用与虚线相同的颜色
-        tput cup $((8 + ${#options[@]})) 0  # 定位到虚线下一行
-        echo -e "${hint_color}使用上下方向键选择${gl_bai}"
-        tput cup $((9 + ${#options[@]})) 0  # 定位到下一行
-        echo -e "${hint_color}或输入数字和字母选择${gl_bai}"
-        tput cup $((10 + ${#options[@]})) 0  # 定位到再下一行
-        echo -e "${hint_color}按 Enter 回车确认选择${gl_bai}"
-
-        # 设置 end_line
-        end_line=$((10 + ${#options[@]}))
-    }
-
-    # 修改后的绘制选项部分
-    draw_menu() {
-        for i in "${!options[@]}"; do
-            tput cup $((7 + $i)) 0  # 从第7行开始绘制菜单
-            if [ "$i" -eq "$current_selection" ]; then
-                echo -e "\033[1;32m> ${options[$i]} \033[0m"  # 高亮显示
-            else
-                option="${options[$i]}"
-                # 仅检查 "a. LDNMP建站 ▶"
-                if [[ "$option" == "a."* ]]; then
-                    # 将 "a" 部分显示为橙色
-                    echo -e "  ${gl_orange}a${gl_reset}.${option#a.}"
-                else
-                    echo "  ${options[$i]}"
-                fi
-            fi
-        done
-        draw_footer  # 绘制底部虚线和提示文本
-    }
-
-    # 修改后的更新选项部分
-    update_option() {
-        tput cup $((7 + $1)) 0
-        if [ "$1" -eq "$current_selection" ]; then
-            echo -e "\033[1;32m> ${options[$1]} \033[0m"  # 高亮显示
-        else
-            option="${options[$1]}"
-            # 仅检查 "a. LDNMP建站 ▶"
-            if [[ "$option" == "a."* ]]; then
-                # 将 "a" 部分显示为橙色
-                echo -e "  ${gl_orange}a${gl_reset}.${option#a.}"
-            else
-                echo "  ${options[$1]}"
-            fi
-        fi
-    }
-
-    # 确保在退出时恢复光标并移动到菜单下方
-    cleanup() {
-        tput cnorm  # 恢复光标
-        if [ "$end_line" -gt 0 ]; then
-            tput cup $((end_line + 1)) 0  # 移动光标到菜单下方
-            echo  # 输出换行符
-        else
-            tput cup 0 0  # 默认移动到第一行
-            echo
-        fi
-    }
-
-    trap cleanup EXIT
-
-    # 主逻辑
-    tput civis  # 隐藏光标
-    draw_title
-    draw_menu
-    while true; do
-        read -rsn1 input  # 读取用户输入
-
-        case "$input" in
-            $'\x1b')  # 方向键输入
-                read -rsn2 -t 0.1 input
-                case "$input" in
-                    "[A")  # 上方向键
-                        old_selection=$current_selection
-                        ((current_selection--))
-                        if [ "$current_selection" -lt 0 ]; then
-                            current_selection=$((${#options[@]} - 1))
-                        fi
-                        update_option "$old_selection"
-                        update_option "$current_selection"
-                        ;;
-                    "[B")  # 下方向键
-                        old_selection=$current_selection
-                        ((current_selection++))
-                        if [ "$current_selection" -ge "${#options[@]}" ]; then
-                            current_selection=0
-                        fi
-                        update_option "$old_selection"
-                        update_option "$current_selection"
-                        ;;
-                esac
-                ;;
-            "")  # Enter 键
-                # 执行对应功能
-                eval "${actions[$current_selection]}"
-
-                # 等待用户按任意键继续
-                echo -e "\n\033[1;32m操作完成，请按任意键返回菜单...\033[0m"
-                read -rsn1  # 等待按任意键
-
-                # 重新绘制菜单
-                draw_title
-                draw_menu
-                ;;
-            [0-9a-z])  # 数字或字母选择
-                for i in "${!options[@]}"; do
-                    if [[ "${options[$i]}" == "$input"* ]]; then
-                        old_selection=$current_selection
-                        current_selection=$i
-                        update_option "$old_selection"
-                        update_option "$current_selection"
-                        break
-                    fi
-                done
-                ;;
-            *)
-                echo "无效的输入！"
-                sleep 1
-                ;;
-        esac
-    done
 }
 
 
 
 
+kejilion_sh() {
+while true; do
+clear
+echo -e "${gl_kjlan}"
+echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
+echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
+echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
+echo -e "科技lion脚本工具箱 v$sh_v"
+echo -e "命令行输入${gl_huang}k${gl_kjlan}可快速启动脚本${gl_bai}"
+echo -e "${gl_kjlan}------------------------${gl_bai}"
+echo -e "${gl_kjlan}1.   ${gl_bai}系统信息查询"
+echo -e "${gl_kjlan}2.   ${gl_bai}系统更新"
+echo -e "${gl_kjlan}3.   ${gl_bai}系统清理"
+echo -e "${gl_kjlan}4.   ${gl_bai}基础工具 ▶"
+echo -e "${gl_kjlan}5.   ${gl_bai}BBR管理 ▶"
+echo -e "${gl_kjlan}6.   ${gl_bai}Docker管理 ▶ "
+echo -e "${gl_kjlan}7.   ${gl_bai}WARP管理 ▶ "
+echo -e "${gl_kjlan}8.   ${gl_bai}测试脚本合集 ▶ "
+echo -e "${gl_kjlan}9.   ${gl_bai}甲骨文云脚本合集 ▶ "
+echo -e "${gl_huang}10.  ${gl_bai}LDNMP建站 ▶ "
+echo -e "${gl_kjlan}11.  ${gl_bai}应用市场 ▶ "
+echo -e "${gl_kjlan}12.  ${gl_bai}我的工作区 ▶ "
+echo -e "${gl_kjlan}13.  ${gl_bai}系统工具 ▶ "
+echo -e "${gl_kjlan}14.  ${gl_bai}服务器集群控制 ▶ "
+echo -e "${gl_kjlan}15.  ${gl_bai}广告专栏"
+echo -e "${gl_kjlan}------------------------${gl_bai}"
+echo -e "${gl_kjlan}p.   ${gl_bai}幻兽帕鲁开服脚本 ▶"
+echo -e "${gl_kjlan}------------------------${gl_bai}"
+echo -e "${gl_kjlan}00.  ${gl_bai}脚本更新"
+echo -e "${gl_kjlan}------------------------${gl_bai}"
+echo -e "${gl_kjlan}0.   ${gl_bai}退出脚本"
+echo -e "${gl_kjlan}------------------------${gl_bai}"
+read -e -p "请输入你的选择: " choice
 
+case $choice in
+  1) linux_ps ;;
+  2) clear ; send_stats "系统更新" ; linux_update ;;
+  3) clear ; send_stats "系统清理" ; linux_clean ;;
+  4) linux_tools ;;
+  5) linux_bbr ;;
+  6) linux_docker ;;
+  7) clear ; send_stats "warp管理" ; install wget
+	wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh ; bash menu.sh [option] [lisence/url/token]
+	;;
+  8) linux_test ;;
+  9) linux_Oracle ;;
+  10) linux_ldnmp ;;
+  11) linux_panel ;;
+  12) linux_work ;;
+  13) linux_Settings ;;
+  14) linux_cluster ;;
+  15) kejilion_Affiliates ;;
+  p) send_stats "幻兽帕鲁开服脚本" ; cd ~
+	 curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/palworld.sh ; chmod +x palworld.sh ; ./palworld.sh
+	 exit
+	 ;;
+  00) kejilion_update ;;
+  0) clear ; exit ;;
+  *) echo "无效的输入!" ;;
+esac
+	break_end
+done
+}
 
 
 k_info() {
@@ -9579,12 +9294,12 @@ else
 		time|时区)
 			shift
 			send_stats "快速设置时区"
-			set_timedate "$@"			
+			set_timedate "$@"
 			;;
 
 
 		iptables_open)
-			iptables_open		
+			iptables_open
 			;;
 
 		status|状态)
@@ -9666,3 +9381,292 @@ else
 			;;
 	esac
 fi
+
+
+
+
+
+
+
+# kejilion_update() {
+#     send_stats "脚本更新"
+#     cd ~
+#     clear
+#     echo "更新日志"
+#     echo "------------------------"
+#     echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
+#     echo "------------------------"
+
+#     curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
+#     local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
+
+#     if [ "$sh_v" = "$sh_v_new" ]; then
+#         echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
+#         send_stats "脚本已经最新了，无需更新"
+#     else
+#         echo "发现新版本！"
+#         echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
+#         echo "------------------------"
+#         read -e -p "确定更新脚本吗？(Y/N): " choice
+#         case "$choice" in
+#             [Yy])
+#                 clear
+#                 local country=$(curl -s ipinfo.io/country)
+#                 local download_url
+
+#                 if [ "$country" = "CN" ]; then
+#                     download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh"
+#                 else
+#                     download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"
+#                 fi
+
+#                 # 下载新脚本
+#                 if ! curl -sS -o kejilion.sh "$download_url"; then
+#                     echo "下载新脚本失败，请检查网络连接。"
+#                     exit 1
+#                 fi
+
+#                 chmod +x kejilion.sh
+
+#                 # 备份当前脚本
+#                 cp /usr/local/bin/k /usr/local/bin/k.bak
+
+#                 # 覆盖当前脚本
+#                 if cp -f kejilion.sh /usr/local/bin/k; then
+#                     echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
+#                     send_stats "脚本已经更新到最新版本 v$sh_v_new"
+
+#                     # 使用 exec 重新执行脚本，替代当前进程
+#                     exec /usr/local/bin/k
+#                 else
+#                     echo "更新失败，无法写入 /usr/local/bin/k。"
+#                     echo "已恢复备份。"
+#                     cp /usr/local/bin/k.bak /usr/local/bin/k
+#                     exit 1
+#                 fi
+#                 ;;
+#             [Nn])
+#                 echo "已取消"
+#                 ;;
+#             *)
+#                 echo "无效的选择，已取消更新。"
+#                 ;;
+#         esac
+#     fi
+# }
+
+# # 定义"a"颜色变量
+# gl_orange="\033[1;33m"  # 橙色（通常用黄色近似表示）
+# gl_reset="\033[0m"      # 重置颜色
+
+# kejilion_sh() { 
+#     # 最小高度要求
+#     local min_height=30  # 最小高度需求，包含菜单和底部提示区域
+
+#     # 初始化 end_line
+#     local end_line=0
+
+#     # 检查终端高度
+#     check_terminal_height() {
+#         local current_height=$(tput lines)
+#         if [ "$current_height" -lt "$min_height" ]; then
+#             tput clear
+#             echo -e "\033[1;31m当前终端高度不足！\033[0m"
+#             echo -e "请调整终端窗口高度至少为 \033[1;32m$min_height\033[0m 行。"
+#             echo -e "当前终端高度：\033[1;33m$current_height\033[0m 行。"
+#             echo -e "请调整后重新运行脚本。"
+#             exit 1
+#         fi
+#     }
+
+#     # 检查终端高度
+#     check_terminal_height
+
+#     # 初始化选项
+#     options=(
+#         "1. 系统信息查询"
+#         "2. 系统更新"
+#         "3. 系统清理"
+#         "4. 基础工具 ▶"
+#         "5. BBR管理 ▶"
+#         "6. Docker管理 ▶"
+#         "7. WARP管理 ▶"
+#         "8. 测试脚本合集 ▶"
+#         "9. 甲骨文云脚本合集 ▶"
+#         "a. LDNMP建站 ▶"
+#         "y. 应用市场 ▶"
+#         "w. 我的工作区 ▶"
+#         "x. 系统工具 ▶"
+#         "f. 服务器集群控制 ▶"
+#         "g. 广告专栏"
+#         "p. 幻兽帕鲁开服脚本 ▶"
+#         "u. 脚本更新"
+#         "0. 退出脚本"
+#     )
+#     actions=(
+#         "linux_ps"
+#         "clear ; send_stats '系统更新' ; linux_update"
+#         "clear ; send_stats '系统清理' ; linux_clean"
+#         "linux_tools"
+#         "linux_bbr"
+#         "linux_docker"
+#         "clear ; send_stats 'warp管理' ; install wget; wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh ; bash menu.sh [option] [lisence/url/token]"
+#         "linux_test"
+#         "linux_Oracle"
+#         "linux_ldnmp"
+#         "linux_panel"
+#         "linux_work"
+#         "linux_Settings"
+#         "linux_cluster"
+#         "kejilion_Affiliates"
+#         "send_stats '幻兽帕鲁开服脚本' ; cd ~; curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/palworld.sh ; chmod +x palworld.sh ; ./palworld.sh"
+#         "kejilion_update"
+#         "exit"  # 修改这里，从 "clear ; exit" 到 "exit"
+#     )
+
+#     current_selection=0  # 当前选中的选项索引
+
+#     # 绘制标题部分（固定不动）
+#     draw_title() {
+#         tput clear
+#         echo -e "${gl_kjlan}"
+#         echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
+#         echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
+#         echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
+#         echo -e "科技lion脚本工具箱 v$sh_v"
+#         echo -e "命令行输入${gl_huang}k${gl_kjlan}可快速启动脚本${gl_bai}"
+#         echo -e "${gl_kjlan}------------------------${gl_bai}"
+#     }
+
+#     # 绘制底部虚线和提示文本
+#     draw_footer() {
+#         local footer_text="${gl_kjlan}------------------------${gl_bai}"
+#         local hint_color="${gl_kjlan}"  # 与虚线颜色一致
+#         tput cup $((7 + ${#options[@]})) 0  # 定位到菜单最后一个选项的下一行
+#         echo -e "$footer_text"
+
+#         # 提示文本分为三行，使用与虚线相同的颜色
+#         tput cup $((8 + ${#options[@]})) 0  # 定位到虚线下一行
+#         echo -e "${hint_color}使用上下方向键选择${gl_bai}"
+#         tput cup $((9 + ${#options[@]})) 0  # 定位到下一行
+#         echo -e "${hint_color}或输入数字和字母选择${gl_bai}"
+#         tput cup $((10 + ${#options[@]})) 0  # 定位到再下一行
+#         echo -e "${hint_color}按 Enter 回车确认选择${gl_bai}"
+
+#         # 设置 end_line
+#         end_line=$((10 + ${#options[@]}))
+#     }
+
+#     # 修改后的绘制选项部分
+#     draw_menu() {
+#         for i in "${!options[@]}"; do
+#             tput cup $((7 + $i)) 0  # 从第7行开始绘制菜单
+#             if [ "$i" -eq "$current_selection" ]; then
+#                 echo -e "\033[1;32m> ${options[$i]} \033[0m"  # 高亮显示
+#             else
+#                 option="${options[$i]}"
+#                 # 仅检查 "a. LDNMP建站 ▶"
+#                 if [[ "$option" == "a."* ]]; then
+#                     # 将 "a" 部分显示为橙色
+#                     echo -e "  ${gl_orange}a${gl_reset}.${option#a.}"
+#                 else
+#                     echo "  ${options[$i]}"
+#                 fi
+#             fi
+#         done
+#         draw_footer  # 绘制底部虚线和提示文本
+#     }
+
+#     # 修改后的更新选项部分
+#     update_option() {
+#         tput cup $((7 + $1)) 0
+#         if [ "$1" -eq "$current_selection" ]; then
+#             echo -e "\033[1;32m> ${options[$1]} \033[0m"  # 高亮显示
+#         else
+#             option="${options[$1]}"
+#             # 仅检查 "a. LDNMP建站 ▶"
+#             if [[ "$option" == "a."* ]]; then
+#                 # 将 "a" 部分显示为橙色
+#                 echo -e "  ${gl_orange}a${gl_reset}.${option#a.}"
+#             else
+#                 echo "  ${options[$1]}"
+#             fi
+#         fi
+#     }
+
+#     # 确保在退出时恢复光标并移动到菜单下方
+#     cleanup() {
+#         tput cnorm  # 恢复光标
+#         if [ "$end_line" -gt 0 ]; then
+#             tput cup $((end_line + 1)) 0  # 移动光标到菜单下方
+#             echo  # 输出换行符
+#         else
+#             tput cup 0 0  # 默认移动到第一行
+#             echo
+#         fi
+#     }
+
+#     trap cleanup EXIT
+
+#     # 主逻辑
+#     tput civis  # 隐藏光标
+#     draw_title
+#     draw_menu
+#     while true; do
+#         read -rsn1 input  # 读取用户输入
+
+#         case "$input" in
+#             $'\x1b')  # 方向键输入
+#                 read -rsn2 -t 0.1 input
+#                 case "$input" in
+#                     "[A")  # 上方向键
+#                         old_selection=$current_selection
+#                         ((current_selection--))
+#                         if [ "$current_selection" -lt 0 ]; then
+#                             current_selection=$((${#options[@]} - 1))
+#                         fi
+#                         update_option "$old_selection"
+#                         update_option "$current_selection"
+#                         ;;
+#                     "[B")  # 下方向键
+#                         old_selection=$current_selection
+#                         ((current_selection++))
+#                         if [ "$current_selection" -ge "${#options[@]}" ]; then
+#                             current_selection=0
+#                         fi
+#                         update_option "$old_selection"
+#                         update_option "$current_selection"
+#                         ;;
+#                 esac
+#                 ;;
+#             "")  # Enter 键
+#                 # 执行对应功能
+#                 eval "${actions[$current_selection]}"
+
+#                 # 等待用户按任意键继续
+#                 echo -e "\n\033[1;32m操作完成，请按任意键返回菜单...\033[0m"
+#                 read -rsn1  # 等待按任意键
+
+#                 # 重新绘制菜单
+#                 draw_title
+#                 draw_menu
+#                 ;;
+#             [0-9a-z])  # 数字或字母选择
+#                 for i in "${!options[@]}"; do
+#                     if [[ "${options[$i]}" == "$input"* ]]; then
+#                         old_selection=$current_selection
+#                         current_selection=$i
+#                         update_option "$old_selection"
+#                         update_option "$current_selection"
+#                         break
+#                     fi
+#                 done
+#                 ;;
+#             *)
+#                 echo "无效的输入！"
+#                 sleep 1
+#                 ;;
+#         esac
+#     done
+# }
+
