@@ -29,7 +29,7 @@ jobs:
         if [[ $GITHUB_REF == refs/heads/main ]]; then
           version_format="v{major}.{minor}.{patch}"
           environment="production"
-        elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+        elif [[ $GITHUB_REF == refs/heads/washsky-develop ]]; then
           version_format="v{major}.{minor}.{patch}-beta"
           environment="staging"
         else
