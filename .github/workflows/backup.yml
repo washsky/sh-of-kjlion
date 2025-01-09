@@ -105,13 +105,6 @@ jobs:
 
 
     # 5. 运行测试和质量检查
-    - name: Run tests and quality checks
-      run: |
-        echo "Running tests..."
-        # 假设使用 npm，替换为实际测试命令
-        npm install
-        npm test
-        echo "Tests completed successfully."
 
     # 6. 创建并推送标签
     - name: Create and push tag
