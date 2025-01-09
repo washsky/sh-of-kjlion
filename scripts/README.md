@@ -16,7 +16,7 @@ windows目录存放windows脚本
 
 ### 一键脚本washsky测试专用
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/washsky/sh-of-kjlion/main/scripts/allinone.sh)
+bash <(curl -s https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/allinone.sh)
 ```
 ***
 
