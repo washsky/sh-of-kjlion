@@ -1,5 +1,5 @@
 #!/bin/bash
-sh_v="3.5.8"
+sh_v="3.5.9"
 
 
 gl_hui='\e[37m'
@@ -5807,6 +5807,7 @@ linux_panel() {
 	  echo -e "${gl_kjlan}49.  ${gl_bai}普罗米修斯(容器监控)		 ${gl_kjlan}50.  ${gl_bai}补货监控工具"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}51.  ${gl_bai}PVE开小鸡面板			 ${gl_kjlan}52.  ${gl_bai}DPanel容器管理面板"
+	  echo -e "${gl_kjlan}53.  ${gl_bai}ollama聊天AI大模型"
 	  echo -e "${gl_kjlan}------------------------"
 	  echo -e "${gl_kjlan}0.   ${gl_bai}返回主菜单"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -6638,7 +6639,7 @@ linux_panel() {
 
 		  28)
 			local docker_name="speedtest"
-			local docker_img="lscr.io/linuxserver/librespeed:latest"
+			local docker_img="ghcr.io/librespeed/speedtest"
 			local docker_port=8028
 			local docker_rum="docker run -d -p 8028:8080 --name speedtest --restart always ghcr.io/librespeed/speedtest"
 			local docker_describe="librespeed是用Javascript实现的轻量级速度测试工具，即开即用"
@@ -7105,7 +7106,17 @@ linux_panel() {
 			docker_app
 			  ;;
 
-
+		  53)
+			local docker_name="ollama"
+			local docker_img="ghcr.io/open-webui/open-webui:Ollama"
+			local docker_port=8053
+			local docker_rum="docker run -d -p 8053:8080 -v /home/docker/ollama:/root/.ollama -v /home/docker/ollama/open-webui:/app/backend/data --name ollama --restart always ghcr.io/open-webui/open-webui:ollama"
+			local docker_describe="OpenWebUI一款大语言模型网页框架，接入全新的llama3大语言模型"
+			local docker_url="官网介绍: https://github.com/open-webui/open-webui"
+			local docker_use="docker exec ollama ollama run llama3"
+			local docker_passwd=""
+			docker_app
+			  ;;
 
 		  0)
 			  kejilion
@@ -8671,151 +8682,6 @@ EOF
 
 
 
-cluster_python3() {
-	install python3 python3-paramiko
-	cd ~/cluster/
-	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/python-for-vps/main/cluster/$py_task
-	python3 ~/cluster/$py_task
-}
-
-
-run_commands_on_servers() {
-	
-	local SERVERS_FILE="$HOME/cluster/servers.py"
-	local SERVERS=$(grep -oP '{"name": "\K[^"]+|"hostname": "\K[^"]+|"port": \K[^,]+|"username": "\K[^"]+|"password": "\K[^"]+' "$SERVERS_FILE")
-
-	# 将提取的信息转换为数组
-	IFS=$'\n' read -r -d '' -a SERVER_ARRAY <<< "$SERVERS"
-
-	# 遍历服务器并执行命令
-	for ((i=0; i<${#SERVER_ARRAY[@]}; i+=5)); do
-		local name=${SERVER_ARRAY[i]}
-		local hostname=${SERVER_ARRAY[i+1]}
-		local port=${SERVER_ARRAY[i+2]}
-		local username=${SERVER_ARRAY[i+3]}
-		local password=${SERVER_ARRAY[i+4]}
-		echo
-		echo -e "${gl_huang}连接到 $name ($hostname)...${gl_bai}"
-		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
-		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
-	done
-	echo
-	break_end
-
-}
-
-
-linux_cluster() {
-mkdir cluster
-if [ ! -f ~/cluster/servers.py ]; then
-	cat > ~/cluster/servers.py << EOF
-servers = [
-
-]
-EOF
-fi
-
-while true; do
-	  clear
-	  send_stats "集群控制中心"
-	  echo "集群服务器列表"
-	  cat ~/cluster/servers.py
-
-	  echo ""
-	  echo "操作"
-	  echo "------------------------"
-	  echo "服务器列表管理"
-	  echo "1. 添加服务器                2. 删除服务器             3. 编辑服务器"
-	  echo "4. 备份集群                  5. 还原集群"
-	  echo "------------------------"
-	  echo "批量执行任务"
-	  echo "11. 安装科技lion脚本         12. 更新系统              13. 清理系统"
-	  echo "14. 安装docker               15. 安装BBR3              16. 设置1G虚拟内存"
-	  echo "17. 设置时区到上海           18. 开放所有端口	       51. 自定义指令"
-	  echo "------------------------"
-	  echo "0. 返回上一级选单"
-	  echo "------------------------"
-	  read -e -p "请输入你的选择: " sub_choice
-
-	  case $sub_choice in
-		  1)
-			  send_stats "添加集群服务器"
-			  read -e -p "服务器名称: " server_name
-			  read -e -p "服务器IP: " server_ip
-			  read -e -p "服务器端口（22）: " server_port
-			  local server_port=${server_port:-22}
-			  read -e -p "服务器用户名（root）: " server_username
-			  local server_username=${server_username:-root}
-			  read -e -p "服务器用户密码: " server_password
-
-			  sed -i "/servers = \[/a\    {\"name\": \"$server_name\", \"hostname\": \"$server_ip\", \"port\": $server_port, \"username\": \"$server_username\", \"password\": \"$server_password\", \"remote_path\": \"/home/\"}," ~/cluster/servers.py
-
-			  ;;
-		  2)
-			  send_stats "删除集群服务器"
-			  read -e -p "请输入需要删除的关键字: " rmserver
-			  sed -i "/$rmserver/d" ~/cluster/servers.py
-			  ;;
-		  3)
-			  send_stats "编辑集群服务器"
-			  install nano
-			  nano ~/cluster/servers.py
-			  ;;
-
-		  4)
-			  clear
-			  send_stats "备份集群"
-			  echo -e "请将 ${gl_huang}/root/cluster/servers.py${gl_bai} 文件下载，完成备份！"
-			  break_end
-			  ;;
-
-		  5)
-			  clear
-			  send_stats "还原集群"
-			  echo "请上传您的servers.py，按任意键开始上传！"
-			  echo -e "请上传您的 ${gl_huang}servers.py${gl_bai} 文件到 ${gl_huang}/root/cluster/${gl_bai} 完成还原！"
-			  break_end
-			  ;;
-
-		  11)
-			  local py_task="install_kejilion.py"
-			  cluster_python3
-			  ;;
-		  12)
-			  run_commands_on_servers "k update"
-			  ;;
-		  13)
-			  run_commands_on_servers "k clean"
-			  ;;
-		  14)
-			  run_commands_on_servers "k docker install"
-			  ;;
-		  15)
-			  run_commands_on_servers "k bbr3"
-			  ;;
-		  16)
-			  run_commands_on_servers "k swap 1024"
-			  ;;
-		  17)
-			  run_commands_on_servers "k time Asia/Shanghai"
-			  ;;
-		  18)
-			  run_commands_on_servers "k iptables_open"
-			  ;;
-
-		  51)
-			  send_stats "自定义执行命令"
-			  read -e -p "请输入批量执行的命令: " mingling
-			  run_commands_on_servers "${mingling}"
-			  ;;
-
-		  *)
-			  kejilion
-			  ;;
-	  esac
-done
-
-}
 
 
 
@@ -9026,56 +8892,388 @@ EOF
 
 
 
-# kejilion_update() {
-
-# 	send_stats "脚本更新"
-# 	cd ~
-# 	clear
-# 	echo "更新日志"
-# 	echo "------------------------"
-# 	echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
-# 	echo "------------------------"
-
-# 	curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
-# 	local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
-
-# 	if [ "$sh_v" = "$sh_v_new" ]; then
-# 		echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
-# 		send_stats "脚本已经最新了，无需更新"
-# 	else
-# 		echo "发现新版本！"
-# 		echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
-# 		echo "------------------------"
-# 		read -e -p "确定更新脚本吗？(Y/N): " choice
-# 		case "$choice" in
-# 			[Yy])
-# 				clear
-# 				local country=$(curl -s ipinfo.io/country)
-# 				if [ "$country" = "CN" ]; then
-# 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
-# 				else
-# 					curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
-# 				fi
-# 				canshu_v6
-# 				CheckFirstRun_true
-# 				yinsiyuanquan2
-# 				cp -f ~/kejilion.sh /usr/local/bin/k > /dev/null 2>&1
-# 				echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
-# 				send_stats "脚本已经最新$sh_v_new"
-# 				break_end
-# 				~/kejilion.sh
-# 				exit
-# 				;;
-# 			[Nn])
-# 				echo "已取消"
-# 				;;
-# 			*)
-# 				;;
-# 		esac
-# 	fi
+cluster_python3() {
+	install python3 python3-paramiko
+	cd ~/cluster/
+	curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/python-for-vps/main/cluster/$py_task
+	python3 ~/cluster/$py_task
+}
 
 
-# }
+run_commands_on_servers() {
+
+	local SERVERS_FILE="$HOME/cluster/servers.py"
+	local SERVERS=$(grep -oP '{"name": "\K[^"]+|"hostname": "\K[^"]+|"port": \K[^,]+|"username": "\K[^"]+|"password": "\K[^"]+' "$SERVERS_FILE")
+
+	# 将提取的信息转换为数组
+	IFS=$'\n' read -r -d '' -a SERVER_ARRAY <<< "$SERVERS"
+
+	# 遍历服务器并执行命令
+	for ((i=0; i<${#SERVER_ARRAY[@]}; i+=5)); do
+		local name=${SERVER_ARRAY[i]}
+		local hostname=${SERVER_ARRAY[i+1]}
+		local port=${SERVER_ARRAY[i+2]}
+		local username=${SERVER_ARRAY[i+3]}
+		local password=${SERVER_ARRAY[i+4]}
+		echo
+		echo -e "${gl_huang}连接到 $name ($hostname)...${gl_bai}"
+		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
+		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
+	done
+	echo
+	break_end
+
+}
+
+
+linux_cluster() {
+mkdir cluster
+if [ ! -f ~/cluster/servers.py ]; then
+	cat > ~/cluster/servers.py << EOF
+servers = [
+
+]
+EOF
+fi
+
+while true; do
+	  clear
+	  send_stats "集群控制中心"
+	  echo "集群服务器列表"
+	  cat ~/cluster/servers.py
+	  echo
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}服务器列表管理${gl_bai}"
+	  echo -e "${gl_kjlan}1.  ${gl_bai}添加服务器               ${gl_kjlan}2.  ${gl_bai}删除服务器            ${gl_kjlan}3.  ${gl_bai}编辑服务器"
+	  echo -e "${gl_kjlan}4.  ${gl_bai}备份集群                 ${gl_kjlan}5.  ${gl_bai}还原集群"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}批量执行任务${gl_bai}"
+	  echo -e "${gl_kjlan}11. ${gl_bai}安装科技lion脚本         ${gl_kjlan}12. ${gl_bai}更新系统              ${gl_kjlan}13. ${gl_bai}清理系统"
+	  echo -e "${gl_kjlan}14. ${gl_bai}安装docker               ${gl_kjlan}15. ${gl_bai}安装BBR3              ${gl_kjlan}16. ${gl_bai}设置1G虚拟内存"
+	  echo -e "${gl_kjlan}17. ${gl_bai}设置时区到上海           ${gl_kjlan}18. ${gl_bai}开放所有端口	       ${gl_kjlan}51. ${gl_bai}自定义指令"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  echo -e "${gl_kjlan}0.  ${gl_bai}返回上一级选单"
+	  echo -e "${gl_kjlan}------------------------${gl_bai}"
+	  read -e -p "请输入你的选择: " sub_choice
+
+	  case $sub_choice in
+		  1)
+			  send_stats "添加集群服务器"
+			  read -e -p "服务器名称: " server_name
+			  read -e -p "服务器IP: " server_ip
+			  read -e -p "服务器端口（22）: " server_port
+			  local server_port=${server_port:-22}
+			  read -e -p "服务器用户名（root）: " server_username
+			  local server_username=${server_username:-root}
+			  read -e -p "服务器用户密码: " server_password
+
+			  sed -i "/servers = \[/a\    {\"name\": \"$server_name\", \"hostname\": \"$server_ip\", \"port\": $server_port, \"username\": \"$server_username\", \"password\": \"$server_password\", \"remote_path\": \"/home/\"}," ~/cluster/servers.py
+
+			  ;;
+		  2)
+			  send_stats "删除集群服务器"
+			  read -e -p "请输入需要删除的关键字: " rmserver
+			  sed -i "/$rmserver/d" ~/cluster/servers.py
+			  ;;
+		  3)
+			  send_stats "编辑集群服务器"
+			  install nano
+			  nano ~/cluster/servers.py
+			  ;;
+
+		  4)
+			  clear
+			  send_stats "备份集群"
+			  echo -e "请将 ${gl_huang}/root/cluster/servers.py${gl_bai} 文件下载，完成备份！"
+			  break_end
+			  ;;
+
+		  5)
+			  clear
+			  send_stats "还原集群"
+			  echo "请上传您的servers.py，按任意键开始上传！"
+			  echo -e "请上传您的 ${gl_huang}servers.py${gl_bai} 文件到 ${gl_huang}/root/cluster/${gl_bai} 完成还原！"
+			  break_end
+			  ;;
+
+		  11)
+			  local py_task="install_kejilion.py"
+			  cluster_python3
+			  ;;
+		  12)
+			  run_commands_on_servers "k update"
+			  ;;
+		  13)
+			  run_commands_on_servers "k clean"
+			  ;;
+		  14)
+			  run_commands_on_servers "k docker install"
+			  ;;
+		  15)
+			  run_commands_on_servers "k bbr3"
+			  ;;
+		  16)
+			  run_commands_on_servers "k swap 1024"
+			  ;;
+		  17)
+			  run_commands_on_servers "k time Asia/Shanghai"
+			  ;;
+		  18)
+			  run_commands_on_servers "k iptables_open"
+			  ;;
+
+		  51)
+			  send_stats "自定义执行命令"
+			  read -e -p "请输入批量执行的命令: " mingling
+			  run_commands_on_servers "${mingling}"
+			  ;;
+
+		  *)
+			  kejilion
+			  ;;
+	  esac
+done
+
+}
+
+
+
+
+kejilion_Affiliates() {
+
+clear
+send_stats "广告专栏"
+echo "广告专栏"
+echo "------------------------"
+echo "将为用户提供更简单优雅的推广与购买体验！"
+echo ""
+echo -e "服务器优惠"
+echo "------------------------"
+echo -e "${gl_lan}RackNerd 10.18刀每年 美国 1核心 768M内存 15G硬盘 1T流量每月${gl_bai}"
+echo -e "${gl_bai}网址: https://my.racknerd.com/aff.php?aff=5501&pid=792${gl_bai}"
+echo "------------------------"
+echo -e "${gl_lv}Cloudcone 10刀每年 美国 1核心 768M内存 5G硬盘 3T流量每月${gl_bai}"
+echo -e "${gl_bai}网址: https://app.cloudcone.com.cn/vps/261/create?ref=8355&token=cloudcone.cc-24-vps-2${gl_bai}"
+echo "------------------------"
+echo -e "${gl_huang}搬瓦工 49刀每季 美国CN2GIA 日本软银 2核心 1G内存 20G硬盘 1T流量每月${gl_bai}"
+echo -e "${gl_bai}网址: https://bandwagonhost.com/aff.php?aff=69004&pid=87${gl_bai}"
+echo "------------------------"
+echo -e "${gl_lan}DMIT 28刀每季 美国CN2GIA 1核心 2G内存 20G硬盘 800G流量每月${gl_bai}"
+echo -e "${gl_bai}网址: https://www.dmit.io/aff.php?aff=4966&pid=100${gl_bai}"
+echo "------------------------"
+echo -e "${gl_zi}V.PS 6.9刀每月 东京软银 2核心 1G内存 20G硬盘 1T流量每月${gl_bai}"
+echo -e "${gl_bai}网址: https://vps.hosting/cart/tokyo-cloud-kvm-vps/?id=148&?affid=1355&?affid=1355${gl_bai}"
+echo "------------------------"
+echo -e "${gl_kjlan}VPS更多热门优惠${gl_bai}"
+echo -e "${gl_bai}网址: https://kejilion.pro/topvps/${gl_bai}"
+echo "------------------------"
+echo ""
+echo -e "域名优惠"
+echo "------------------------"
+echo -e "${gl_lan}GNAME 8.8刀首年COM域名 6.68刀首年CC域名${gl_bai}"
+echo -e "${gl_bai}网址: https://www.gname.com/register?tt=86836&ttcode=KEJILION86836&ttbj=sh${gl_bai}"
+echo "------------------------"
+echo ""
+echo -e "科技lion周边"
+echo "------------------------"
+echo -e "${gl_kjlan}B站:   ${gl_bai}https://b23.tv/2mqnQyh              ${gl_kjlan}油管:     ${gl_bai}https://www.youtube.com/@kejilion${gl_bai}"
+echo -e "${gl_kjlan}官网:  ${gl_bai}https://kejilion.pro/               ${gl_kjlan}导航:     ${gl_bai}https://dh.kejilion.pro/${gl_bai}"
+echo -e "${gl_kjlan}博客:  ${gl_bai}https://blog.kejilion.pro/          ${gl_kjlan}软件中心: ${gl_bai}https://app.kejilion.pro/${gl_bai}"
+echo "------------------------"
+echo ""
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+k_info() {
+send_stats "k命令参考用例"
+echo "-------------------"
+echo "视频介绍: https://www.bilibili.com/video/BV1ib421E7it?t=0.1"
+echo "以下是k命令参考用例："
+echo "启动脚本            k"
+echo "安装软件包          k install nano wget | k add nano wget | k 安装 nano wget"
+echo "卸载软件包          k remove nano wget | k del nano wget | k uninstall nano wget | k 卸载 nano wget"
+echo "更新系统            k update | k 更新"
+echo "清理系统垃圾        k clean | k 清理"
+echo "打开重装系统面板    k dd | k 重装"
+echo "打开bbr3控制面板    k bbr3 | k bbrv3"
+echo "打开内核调优面板    k nhyh | k 内核优化"
+echo "设置虚拟内存        k swap 2048"
+echo "设置虚拟时区        k time Asia/Shanghai | k 时区 Asia/Shanghai"
+echo "打开系统回收站      k trash | k hsz | k 回收站"
+echo "软件启动            k start sshd | k 启动 sshd "
+echo "软件停止            k stop sshd | k 停止 sshd "
+echo "软件重启            k restart sshd | k 重启 sshd "
+echo "软件状态查看        k status sshd | k 状态 sshd "
+echo "软件开机启动        k enable docker | k autostart docke | k 开机启动 docker "
+echo "域名证书申请        k ssl"
+echo "域名证书到期查询    k ssl ps"
+echo "docker环境安装      k docker install |k docker 安装"
+echo "docker容器管理      k docker ps |k docker 容器"
+echo "docker镜像管理      k docker img |k docker 镜像"
+echo "LDNMP站点管理       k web"
+echo "LDNMP缓存清理       k web cache"
+echo "安装WordPress       k wp |k wordpress |k wp xxx.com"
+echo "安装反向代理        k fd |k rp |k 反代 |k fd xxx.com"
+
+}
+
+
+
+if [ "$#" -eq 0 ]; then
+	# 如果没有参数，运行交互式逻辑
+	kejilion_sh
+else
+	# 如果有参数，执行相应函数
+	case $1 in
+		install|add|安装)
+			shift
+			send_stats "安装软件"
+			install "$@"
+			;;
+		remove|del|uninstall|卸载)
+			shift
+			send_stats "卸载软件"
+			remove "$@"
+			;;
+		update|更新)
+			linux_update
+			;;
+		clean|清理)
+			linux_clean
+			;;
+		dd|重装)
+			dd_xitong
+			;;
+		bbr3|bbrv3)
+			bbrv3
+			;;
+		nhyh|内核优化)
+			Kernel_optimize
+			;;
+		trash|hsz|回收站)
+			linux_trash
+			;;
+		wp|wordpress)
+			shift
+			ldnmp_wp "$@"
+
+			;;
+		fd|rp|反代)
+			shift
+			ldnmp_Proxy "$@"
+			;;
+
+		swap)
+			shift
+			send_stats "快速设置虚拟内存"
+			add_swap "$@"
+			;;
+
+		time|时区)
+			shift
+			send_stats "快速设置时区"
+			set_timedate "$@"
+			;;
+
+
+		iptables_open)
+			iptables_open
+			;;
+
+		status|状态)
+			shift
+			send_stats "软件状态查看"
+			status "$@"
+			;;
+		start|启动)
+			shift
+			send_stats "软件启动"
+			start "$@"
+			;;
+		stop|停止)
+			shift
+			send_stats "软件暂停"
+			stop "$@"
+			;;
+		restart|重启)
+			shift
+			send_stats "软件重启"
+			restart "$@"
+			;;
+
+		enable|autostart|开机启动)
+			shift
+			send_stats "软件开机自启"
+			enable "$@"
+			;;
+
+		ssl)
+			shift
+			if [ "$1" = "ps" ]; then
+				send_stats "查看证书状态"
+				ssl_ps
+			elif [ -z "$1" ]; then
+				add_ssl
+				send_stats "快速申请证书"
+			elif [ -n "$1" ]; then
+				add_ssl "$1"
+				send_stats "快速申请证书"
+			else
+				k_info
+			fi
+			;;
+
+		docker)
+			shift
+			case $1 in
+				install|安装)
+					send_stats "快捷安装docker"
+					install_docker
+					;;
+				ps|容器)
+					send_stats "快捷容器管理"
+					docker_ps
+					;;
+				img|镜像)
+					send_stats "快捷镜像管理"
+					docker_image
+					;;
+				*)
+					k_info
+					;;
+			esac
+			;;
+
+		web)
+		   shift
+			if [ "$1" = "cache" ]; then
+				web_cache
+			elif [ -z "$1" ]; then
+				ldnmp_web_status
+			else
+				k_info
+			fi
+			;;
+		*)
+			k_info
+			;;
+	esac
+fi
+
+
+
+
 
 
 
@@ -9145,130 +9343,6 @@ kejilion_update() {
         esac
     fi
 }
-
-
-
-
-
-
-kejilion_Affiliates() {
-
-clear
-send_stats "广告专栏"
-echo "广告专栏"
-echo "------------------------"
-echo "将为用户提供更简单优雅的推广与购买体验！"
-echo ""
-echo -e "服务器优惠"
-echo "------------------------"
-echo -e "${gl_lan}RackNerd 10.18刀每年 美国 1核心 768M内存 15G硬盘 1T流量每月${gl_bai}"
-echo -e "${gl_bai}网址: https://my.racknerd.com/aff.php?aff=5501&pid=792${gl_bai}"
-echo "------------------------"
-echo -e "${gl_lv}Cloudcone 10刀每年 美国 1核心 768M内存 5G硬盘 3T流量每月${gl_bai}"
-echo -e "${gl_bai}网址: https://app.cloudcone.com.cn/vps/261/create?ref=8355&token=cloudcone.cc-24-vps-2${gl_bai}"
-echo "------------------------"
-echo -e "${gl_huang}搬瓦工 49刀每季 美国CN2GIA 日本软银 2核心 1G内存 20G硬盘 1T流量每月${gl_bai}"
-echo -e "${gl_bai}网址: https://bandwagonhost.com/aff.php?aff=69004&pid=87${gl_bai}"
-echo "------------------------"
-echo -e "${gl_lan}DMIT 28刀每季 美国CN2GIA 1核心 2G内存 20G硬盘 800G流量每月${gl_bai}"
-echo -e "${gl_bai}网址: https://www.dmit.io/aff.php?aff=4966&pid=100${gl_bai}"
-echo "------------------------"
-echo -e "${gl_zi}V.PS 6.9刀每月 东京软银 2核心 1G内存 20G硬盘 1T流量每月${gl_bai}"
-echo -e "${gl_bai}网址: https://vps.hosting/cart/tokyo-cloud-kvm-vps/?id=148&?affid=1355&?affid=1355${gl_bai}"
-echo "------------------------"
-echo -e "${gl_kjlan}VPS更多热门优惠${gl_bai}"
-echo -e "${gl_bai}网址: https://kejilion.pro/topvps/${gl_bai}"
-echo "------------------------"
-echo ""
-echo -e "域名优惠"
-echo "------------------------"
-echo -e "${gl_lan}GNAME 8.8刀首年COM域名 6.68刀首年CC域名${gl_bai}"
-echo -e "${gl_bai}网址: https://www.gname.com/register?tt=86836&ttcode=KEJILION86836&ttbj=sh${gl_bai}"
-echo "------------------------"
-echo ""
-echo -e "科技lion周边"
-echo "------------------------"
-echo -e "${gl_kjlan}B站:   ${gl_bai}https://b23.tv/2mqnQyh              ${gl_kjlan}油管:     ${gl_bai}https://www.youtube.com/@kejilion${gl_bai}"
-echo -e "${gl_kjlan}官网:  ${gl_bai}https://kejilion.pro/               ${gl_kjlan}导航:     ${gl_bai}https://dh.kejilion.pro/${gl_bai}"
-echo -e "${gl_kjlan}博客:  ${gl_bai}https://blog.kejilion.pro/          ${gl_kjlan}软件中心: ${gl_bai}https://app.kejilion.pro/${gl_bai}"
-echo "------------------------"
-echo ""
-}
-
-
-# kejilion_sh() {
-# while true; do
-# clear
-# echo -e "${gl_kjlan}"
-# echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
-# echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
-# echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
-# echo -e "科技lion脚本工具箱 v$sh_v"
-# echo -e "命令行输入${gl_huang}k${gl_kjlan}可快速启动脚本${gl_bai}"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}1.   ${gl_bai}系统信息查询"
-# echo -e "${gl_kjlan}2.   ${gl_bai}系统更新"
-# echo -e "${gl_kjlan}3.   ${gl_bai}系统清理"
-# echo -e "${gl_kjlan}4.   ${gl_bai}基础工具 ▶"
-# echo -e "${gl_kjlan}5.   ${gl_bai}BBR管理 ▶"
-# echo -e "${gl_kjlan}6.   ${gl_bai}Docker管理 ▶ "
-# echo -e "${gl_kjlan}7.   ${gl_bai}WARP管理 ▶ "
-# echo -e "${gl_kjlan}8.   ${gl_bai}测试脚本合集 ▶ "
-# echo -e "${gl_kjlan}9.   ${gl_bai}甲骨文云脚本合集 ▶ "
-# echo -e "${gl_huang}10.  ${gl_bai}LDNMP建站 ▶ "
-# echo -e "${gl_kjlan}11.  ${gl_bai}应用市场 ▶ "
-# echo -e "${gl_kjlan}12.  ${gl_bai}我的工作区 ▶ "
-# echo -e "${gl_kjlan}13.  ${gl_bai}系统工具 ▶ "
-# echo -e "${gl_kjlan}14.  ${gl_bai}服务器集群控制 ▶ "
-# echo -e "${gl_kjlan}15.  ${gl_bai}广告专栏"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}p.   ${gl_bai}幻兽帕鲁开服脚本 ▶"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}00.  ${gl_bai}脚本更新"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# echo -e "${gl_kjlan}0.   ${gl_bai}退出脚本"
-# echo -e "${gl_kjlan}------------------------${gl_bai}"
-# read -e -p "请输入你的选择: " choice
-
-# case $choice in
-#   1) linux_ps ;;
-#   2) clear ; send_stats "系统更新" ; linux_update ;;
-#   3) clear ; send_stats "系统清理" ; linux_clean ;;
-#   4) linux_tools ;;
-#   5) linux_bbr ;;
-#   6) linux_docker ;;
-#   7) clear ; send_stats "warp管理" ; install wget
-# 	wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh ; bash menu.sh [option] [lisence/url/token]
-# 	;;
-#   8) linux_test ;;
-#   9) linux_Oracle ;;
-#   10) linux_ldnmp ;;
-#   11) linux_panel ;;
-#   12) linux_work ;;
-#   13) linux_Settings ;;
-#   14) linux_cluster ;;
-#   15) kejilion_Affiliates ;;
-#   p) send_stats "幻兽帕鲁开服脚本" ; cd ~
-# 	 curl -sS -O ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/palworld.sh ; chmod +x palworld.sh ; ./palworld.sh
-# 	 exit
-# 	 ;;
-#   00) kejilion_update ;;
-#   0) clear ; exit ;;
-#   *) echo "无效的输入!" ;;
-# esac
-# 	break_end
-# done
-# }
-
-
-
-
-
-
-
-
-
-
 
 # 定义"a"颜色变量
 gl_orange="\033[1;33m"  # 橙色（通常用黄色近似表示）
@@ -9484,187 +9558,4 @@ kejilion_sh() {
         esac
     done
 }
-
-
-
-
-
-
-
-k_info() {
-send_stats "k命令参考用例"
-echo "-------------------"
-echo "视频介绍: https://www.bilibili.com/video/BV1ib421E7it?t=0.1"
-echo "以下是k命令参考用例："
-echo "启动脚本            k"
-echo "安装软件包          k install nano wget | k add nano wget | k 安装 nano wget"
-echo "卸载软件包          k remove nano wget | k del nano wget | k uninstall nano wget | k 卸载 nano wget"
-echo "更新系统            k update | k 更新"
-echo "清理系统垃圾        k clean | k 清理"
-echo "打开重装系统面板    k dd | k 重装"
-echo "打开bbr3控制面板    k bbr3 | k bbrv3"
-echo "打开内核调优面板    k nhyh | k 内核优化"
-echo "设置虚拟内存        k swap 2048"
-echo "设置虚拟时区        k time Asia/Shanghai | k 时区 Asia/Shanghai"
-echo "打开系统回收站      k trash | k hsz | k 回收站"
-echo "软件启动            k start sshd | k 启动 sshd "
-echo "软件停止            k stop sshd | k 停止 sshd "
-echo "软件重启            k restart sshd | k 重启 sshd "
-echo "软件状态查看        k status sshd | k 状态 sshd "
-echo "软件开机启动        k enable docker | k autostart docke | k 开机启动 docker "
-echo "域名证书申请        k ssl"
-echo "域名证书到期查询    k ssl ps"
-echo "docker环境安装      k docker install |k docker 安装"
-echo "docker容器管理      k docker ps |k docker 容器"
-echo "docker镜像管理      k docker img |k docker 镜像"
-echo "LDNMP站点管理       k web"
-echo "LDNMP缓存清理       k web cache"
-echo "安装WordPress       k wp |k wordpress |k wp xxx.com"
-echo "安装反向代理        k fd |k rp |k 反代 |k fd xxx.com"
-
-}
-
-
-
-if [ "$#" -eq 0 ]; then
-	# 如果没有参数，运行交互式逻辑
-	kejilion_sh
-else
-	# 如果有参数，执行相应函数
-	case $1 in
-		install|add|安装)
-			shift
-			send_stats "安装软件"
-			install "$@"
-			;;
-		remove|del|uninstall|卸载)
-			shift
-			send_stats "卸载软件"
-			remove "$@"
-			;;
-		update|更新)
-			linux_update
-			;;
-		clean|清理)
-			linux_clean
-			;;
-		dd|重装)
-			dd_xitong
-			;;
-		bbr3|bbrv3)
-			bbrv3
-			;;
-		nhyh|内核优化)
-			Kernel_optimize
-			;;
-		trash|hsz|回收站)
-			linux_trash
-			;;
-		wp|wordpress)
-			shift
-			ldnmp_wp "$@"
-
-			;;
-		fd|rp|反代)
-			shift
-			ldnmp_Proxy "$@"
-			;;
-
-		swap)
-			shift
-			send_stats "快速设置虚拟内存"
-			add_swap "$@"
-			;;
-
-		time|时区)
-			shift
-			send_stats "快速设置时区"
-			set_timedate "$@"			
-			;;
-
-
-		iptables_open)
-			iptables_open		
-			;;
-
-		status|状态)
-			shift
-			send_stats "软件状态查看"
-			status "$@"
-			;;
-		start|启动)
-			shift
-			send_stats "软件启动"
-			start "$@"
-			;;
-		stop|停止)
-			shift
-			send_stats "软件暂停"
-			stop "$@"
-			;;
-		restart|重启)
-			shift
-			send_stats "软件重启"
-			restart "$@"
-			;;
-
-		enable|autostart|开机启动)
-			shift
-			send_stats "软件开机自启"
-			enable "$@"
-			;;
-
-		ssl)
-			shift
-			if [ "$1" = "ps" ]; then
-				send_stats "查看证书状态"
-				ssl_ps
-			elif [ -z "$1" ]; then
-				add_ssl
-				send_stats "快速申请证书"
-			elif [ -n "$1" ]; then
-				add_ssl "$1"
-				send_stats "快速申请证书"
-			else
-				k_info
-			fi
-			;;
-
-		docker)
-			shift
-			case $1 in
-				install|安装)
-					send_stats "快捷安装docker"
-					install_docker
-					;;
-				ps|容器)
-					send_stats "快捷容器管理"
-					docker_ps
-					;;
-				img|镜像)
-					send_stats "快捷镜像管理"
-					docker_image
-					;;
-				*)
-					k_info
-					;;
-			esac
-			;;
-
-		web)
-		   shift
-			if [ "$1" = "cache" ]; then
-				web_cache
-			elif [ -z "$1" ]; then
-				ldnmp_web_status
-			else
-				k_info
-			fi
-			;;
-		*)
-			k_info
-			;;
-	esac
-fi
-
 
