@@ -189,7 +189,7 @@ kejilion_update() {
                 download_dependencies "$DOWNLOAD_DIR"
 
                 # 赋予执行权限
-                chmod +x "$DOWNLOAD_DIR/kejilion.sh"
+                chmod +x "$DOWNLOAD_DIR/main.sh"
 
                 # 备份当前脚本
                 if [ -f "/usr/local/bin/k" ]; then
@@ -197,7 +197,7 @@ kejilion_update() {
                 fi
 
                 # 覆盖当前脚本
-                if cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/k; then
+                if cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/kk; then
                     echo -e "${gl_lv}脚本 kejilion.sh 已更新到最新版本！${gl_huang}v$remote_sh_v${gl_bai}"
                     send_stats "脚本已经更新到最新版本 v$remote_sh_v"
 
@@ -205,7 +205,7 @@ kejilion_update() {
                     cp "$temp_config_file" "$local_config_file"
 
                     # 使用 exec 重新执行脚本，替代当前进程
-                    exec /usr/local/bin/k
+                    exec /usr/local/bin/kk
                 else
                     echo "更新失败，无法写入 /usr/local/bin/k。"
                     if [ -f "/usr/local/bin/k.bak" ]; then
