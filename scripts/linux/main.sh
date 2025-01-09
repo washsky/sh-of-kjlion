@@ -192,7 +192,7 @@ kejilion_update() {
         local_version_format=$(grep '^version_format:' "$local_config_file" | cut -d'"' -f2)
 
         # 构造本地完整版本号
-        local_sh_v=$(echo "$local_version_format" | sed "s/{major}/$local_major/" | sed "s/{minor}/$local_minor/" | sed "s/{patch}/$local_patch/")
+        local_sh_v=$(echo "$local_version_format" | sed "s/{major}/$local_major/" | sed "s/{minor}/$local_minor/" | sed "s/{patch}/$local_patch/"))
     else
         echo "本地配置文件不存在：$local_config_file"
         local_sh_v="0.0.0"  # 假设初始版本为 0.0.0
@@ -213,6 +213,7 @@ kejilion_update() {
         case "$choice" in
             [Yy])
                 clear
+
                 # 获取用户所在国家
                 local country=$(curl -s ipinfo.io/country)
                 local download_url
@@ -223,9 +224,26 @@ kejilion_update() {
                     echo "检测到您位于中国，使用代理下载依赖文件..."
                 fi
 
-                # 更新所有依赖文件
-                echo "开始更新所有依赖文件..."
-                download_dependencies "$DOWNLOAD_DIR"
+                # 先创建一个临时目录用于下载更新文件
+                local temp_dir="/tmp/kejilion_update"
+                mkdir -p "$temp_dir"
+
+                # 下载所有依赖文件到临时目录
+                echo "开始下载所有依赖文件到临时目录 $temp_dir..."
+                download_dependencies "$temp_dir"
+
+                # 确保 temp_dir 中的文件已经下载完毕
+                for dep in "${DEPENDENCIES[@]}"; do
+                    local FILENAME=$(echo "$dep" | cut -d'|' -f1)
+                    if [ ! -f "$temp_dir/$FILENAME" ]; then
+                        echo "下载失败，文件不存在：$temp_dir/$FILENAME"
+                        exit 1
+                    fi
+                done
+
+                # 更新所有依赖文件到目标目录
+                echo "开始将更新文件从临时目录复制到 $DOWNLOAD_DIR ..."
+                cp -rf "$temp_dir"/* "$DOWNLOAD_DIR"
 
                 # 赋予执行权限
                 chmod +x "$DOWNLOAD_DIR/main.sh"
@@ -235,27 +253,15 @@ kejilion_update() {
                     cp /usr/local/bin/kk /usr/local/bin/kk.bak
                 fi
 
-             
+                # 更新目标脚本
+                echo "更新脚本 main.sh 到 /usr/local/bin/kk ..."
+                cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/kk
 
+                # 更新本地的 tag-config.yml
+                cp "$temp_config_file" "$local_config_file"
 
-                # 覆盖当前脚本
-                if cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/kk; then
-                    echo -e "${gl_lv}脚本 main.sh 已更新到最新版本！${gl_huang}v$remote_sh_v${gl_bai}"
-                    send_stats "脚本已经更新到最新版本 v$remote_sh_v"
-
-                    # 更新本地的 tag-config.yml
-                    cp "$temp_config_file" "$local_config_file"
-
-                    # 使用 exec 重新执行脚本，替代当前进程
-                    exec /usr/local/bin/kk
-                else
-                    echo "更新失败，无法写入 /usr/local/bin/kk。"
-                    if [ -f "/usr/local/bin/kk.bak" ]; then
-                        echo "已恢复备份。"
-                        cp /usr/local/bin/kk.bak /usr/local/bin/kk
-                    fi
-                    exit 1
-                fi
+                # 使用 exec 重新执行脚本，替代当前进程
+                exec /usr/local/bin/kk
                 ;;
             [Nn])
                 echo "已取消更新"
@@ -268,6 +274,7 @@ kejilion_update() {
 
     # 清理临时配置文件
     rm -f "$temp_config_file"
+    rm -rf "$temp_dir"  # 清理临时下载目录
 }
 
 
