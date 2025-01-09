@@ -447,4 +447,3 @@ kejilion_sh() {
 # 1. 加载kejilion_sh()函数后面的脚本
 source "$DOWNLOAD_DIR/k_info.sh"
 
-#1
