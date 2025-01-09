@@ -197,7 +197,7 @@ kejilion_update() {
                 fi
 
                 # 覆盖当前脚本
-                if cp -f "$DOWNLOAD_DIR/kejilion.sh" /usr/local/bin/k; then
+                if cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/k; then
                     echo -e "${gl_lv}脚本 kejilion.sh 已更新到最新版本！${gl_huang}v$remote_sh_v${gl_bai}"
                     send_stats "脚本已经更新到最新版本 v$remote_sh_v"
 
@@ -447,3 +447,4 @@ kejilion_sh() {
 # 1. 加载kejilion_sh()函数后面的脚本
 source "$DOWNLOAD_DIR/k_info.sh"
 
+#1

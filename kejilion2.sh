@@ -1,7 +1,7 @@
 #!/bin/bash
 sh_v="3.5.9"
 
-#
+
 gl_hui='\e[37m'
 gl_hong='\033[31m'
 gl_lv='\033[32m'
