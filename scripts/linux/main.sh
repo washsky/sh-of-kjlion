@@ -14,6 +14,10 @@ trap cleanup EXIT
 # 创建存放目录
 mkdir -p "$DOWNLOAD_DIR"
 
+# 定义 GitHub 代理（如果有）
+gh_proxy="https://ghproxy.com/"  # 根据需要修改
+
+
 # 定义依赖脚本和配置文件的 URL 和文件名
 DEPENDENCIES=(
     "main.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/main.sh"
@@ -22,23 +26,29 @@ DEPENDENCIES=(
     "tag-config.yml|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/config/tag-config.yml"  # 配置文件
 )
 
-# 下载依赖脚本和配置文件到指定目录
-for dep in "${DEPENDENCIES[@]}"; do
-    FILENAME=$(echo "$dep" | cut -d'|' -f1)
-    URL=$(echo "$dep" | cut -d'|' -f2)
-    
-    # 检查文件是否已存在
-    if [ ! -f "$DOWNLOAD_DIR/$FILENAME" ]; then
-        echo "正在下载 $FILENAME 到 $DOWNLOAD_DIR..."
-        curl -s -o "$DOWNLOAD_DIR/$FILENAME" "$URL"
-        if [ $? -ne 0 ]; then
-            echo "下载失败：$FILENAME"
-            exit 1
+# 下载依赖脚本和配置文件的函数
+download_dependencies() {
+    local download_dir="$1"  # 下载目录
+
+    for dep in "${DEPENDENCIES[@]}"; do
+        local FILENAME=$(echo "$dep" | cut -d'|' -f1)
+        local URL=$(echo "$dep" | cut -d'|' -f2)
+
+        # 检查文件是否已存在
+        if [ ! -f "$download_dir/$FILENAME" ]; then
+            echo "正在下载 $FILENAME 到 $download_dir..."
+            if ! curl -s -o "$download_dir/$FILENAME" "$URL"; then
+                echo "下载失败：$FILENAME"
+                exit 1
+            fi
+        else
+            echo "文件已存在：$download_dir/$FILENAME"
         fi
-    else
-        echo "文件已存在：$DOWNLOAD_DIR/$FILENAME"
-    fi
-done
+    done
+}
+
+# 下载依赖脚本和配置文件到指定目录
+download_dependencies "$DOWNLOAD_DIR"
 
 
 
@@ -65,7 +75,7 @@ sh_v=$(echo "$version_format" | sed "s/{major}/$major/" | sed "s/{minor}/$minor/
 
 
 
-# === 模块函数 === #此函数暂时不使用
+# === 模块函数 === #此函数暂时不使用,因为看着不错先放这
 load_modules() {
     # 加载依赖脚本 #通过函数触发顺序
     for dep in "${DEPENDENCIES[@]}"; do
@@ -101,72 +111,123 @@ source "$DOWNLOAD_DIR/kejilion.sh"
 
 
 
+# === 定义更新函数 ===
 kejilion_update() {
     send_stats "脚本更新"
     cd ~
     clear
+
     echo "更新日志"
     echo "------------------------"
-    echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
+    echo "全部日志: ${gh_proxy}https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/sh_log.txt"
     echo "------------------------"
 
-    curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 35
-    local sh_v_new=$(curl -s ${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
+    # 显示最新的 35 行更新日志
+    curl -s ${gh_proxy}https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/sh_log.txt | tail -n 35
 
-    if [ "$sh_v" = "$sh_v_new" ]; then
-        echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$sh_v${gl_bai}"
+    # 定义远程 tag-config.yml 的 URL
+    local remote_config_url="https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/config/tag-config.yml"
+    local local_config_file="$DOWNLOAD_DIR/tag-config.yml"
+    local temp_config_file="/tmp/tag-config.yml"
+
+    # 下载远程的 tag-config.yml 到临时文件
+    if ! curl -s -o "$temp_config_file" "$remote_config_url"; then
+        echo "下载远程配置文件失败，请检查网络连接。"
+        exit 1
+    fi
+
+    # 提取远程版本信息
+    remote_major=$(grep '^major:' "$temp_config_file" | awk '{print $2}')
+    remote_minor=$(grep '^minor:' "$temp_config_file" | awk '{print $2}')
+    remote_patch=$(grep '^patch:' "$temp_config_file" | awk '{print $2}')
+    remote_version_format=$(grep '^version_format:' "$temp_config_file" | cut -d'"' -f2)
+
+    # 构造远程完整版本号
+    remote_sh_v=$(echo "$remote_version_format" | sed "s/{major}/$remote_major/" | sed "s/{minor}/$remote_minor/" | sed "s/{patch}/$remote_patch/")
+
+    # 提取本地版本信息
+    if [ -f "$local_config_file" ]; then
+        local_major=$(grep '^major:' "$local_config_file" | awk '{print $2}')
+        local_minor=$(grep '^minor:' "$local_config_file" | awk '{print $2}')
+        local_patch=$(grep '^patch:' "$local_config_file" | awk '{print $2}')
+        local_version_format=$(grep '^version_format:' "$local_config_file" | cut -d'"' -f2)
+
+        # 构造本地完整版本号
+        local_sh_v=$(echo "$local_version_format" | sed "s/{major}/$local_major/" | sed "s/{minor}/$local_minor/" | sed "s/{patch}/$local_patch/")
+    else
+        echo "本地配置文件不存在：$local_config_file"
+        local_sh_v="0.0.0"  # 假设初始版本为 0.0.0
+    fi
+
+    echo "当前版本 v$local_sh_v    最新版本 v$remote_sh_v"
+    echo "------------------------"
+
+    # 比较版本号
+    if [ "$remote_sh_v" = "$local_sh_v" ]; then
+        echo -e "${gl_lv}你已经是最新版本！${gl_huang}v$remote_sh_v${gl_bai}"
         send_stats "脚本已经最新了，无需更新"
     else
         echo "发现新版本！"
-        echo -e "当前版本 v$sh_v        最新版本 ${gl_huang}v$sh_v_new${gl_bai}"
+        echo -e "当前版本 v$local_sh_v        最新版本 ${gl_huang}v$remote_sh_v${gl_bai}"
         echo "------------------------"
         read -e -p "确定更新脚本吗？(Y/N): " choice
         case "$choice" in
             [Yy])
                 clear
+                # 获取用户所在国家
                 local country=$(curl -s ipinfo.io/country)
                 local download_url
 
+                # 根据用户所在国家选择下载路径（防止访问 GitHub 问题）
                 if [ "$country" = "CN" ]; then
-                    download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh"
-                else
-                    download_url="${gh_proxy}https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"
+                    # 如果在中国，从中国区镜像下载所有依赖
+                    echo "检测到您位于中国，使用代理下载依赖文件..."
                 fi
 
-                # 下载新脚本
-                if ! curl -sS -o kejilion.sh "$download_url"; then
-                    echo "下载新脚本失败，请检查网络连接。"
-                    exit 1
-                fi
+                # 更新所有依赖文件
+                echo "开始更新所有依赖文件..."
+                download_dependencies "$DOWNLOAD_DIR"
 
-                chmod +x kejilion.sh
+                # 赋予执行权限
+                chmod +x "$DOWNLOAD_DIR/kejilion.sh"
 
                 # 备份当前脚本
-                cp /usr/local/bin/k /usr/local/bin/k.bak
+                if [ -f "/usr/local/bin/k" ]; then
+                    cp /usr/local/bin/k /usr/local/bin/k.bak
+                fi
 
                 # 覆盖当前脚本
-                if cp -f kejilion.sh /usr/local/bin/k; then
-                    echo -e "${gl_lv}脚本已更新到最新版本！${gl_huang}v$sh_v_new${gl_bai}"
-                    send_stats "脚本已经更新到最新版本 v$sh_v_new"
+                if cp -f "$DOWNLOAD_DIR/kejilion.sh" /usr/local/bin/k; then
+                    echo -e "${gl_lv}脚本 kejilion.sh 已更新到最新版本！${gl_huang}v$remote_sh_v${gl_bai}"
+                    send_stats "脚本已经更新到最新版本 v$remote_sh_v"
+
+                    # 更新本地的 tag-config.yml
+                    cp "$temp_config_file" "$local_config_file"
 
                     # 使用 exec 重新执行脚本，替代当前进程
                     exec /usr/local/bin/k
                 else
                     echo "更新失败，无法写入 /usr/local/bin/k。"
-                    echo "已恢复备份。"
-                    cp /usr/local/bin/k.bak /usr/local/bin/k
+                    if [ -f "/usr/local/bin/k.bak" ]; then
+                        echo "已恢复备份。"
+                        cp /usr/local/bin/k.bak /usr/local/bin/k
+                    fi
                     exit 1
                 fi
                 ;;
             [Nn])
-                echo "已取消"
+                echo "已取消更新"
                 ;;
             *)
                 echo "无效的选择，已取消更新。"
                 ;;
         esac
     fi
+
+    # 清理临时配置文件
+    rm -f "$temp_config_file"
 }
+
 
 # 定义"a"颜色变量
 gl_orange="\033[1;33m"  # 橙色（通常用黄色近似表示）
