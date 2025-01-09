@@ -16,6 +16,7 @@ mkdir -p "$DOWNLOAD_DIR"
 
 # 定义依赖脚本和配置文件的 URL 和文件名
 DEPENDENCIES=(
+    "main.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/main.sh"
     "kejilion.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/kejilion.sh"
     "k_info.sh|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/k_info.sh"
     "tag-config.yml|https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/config/tag-config.yml"  # 配置文件
