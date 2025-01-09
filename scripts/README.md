@@ -12,3 +12,12 @@ main_ scripts只是一个占位文件,请不要删除
 
 linux目录存放linux脚本
 windows目录存放windows脚本
+
+
+### 一键脚本washsky测试专用
+```bash
+bash <(curl -s https://raw.githubusercontent.com/washsky/sh-of-kjlion/main/scripts/allinone.sh)
+```
+***
+
+
