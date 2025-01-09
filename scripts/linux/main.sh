@@ -75,6 +75,45 @@ sh_v=$(echo "$version_format" | sed "s/{major}/$major/" | sed "s/{minor}/$minor/
 
 
 
+xxxxx(){
+    # 检查脚本文件是否存在
+    SCRIPT_PATH="$DOWNLOAD_DIR/main.sh"
+    if [ ! -f "$SCRIPT_PATH" ]; then
+        echo "脚本文件不存在: $SCRIPT_PATH"
+        exit 1
+    fi
+
+    # 目标目录，通常是 /usr/local/bin
+    TARGET_DIR="/usr/local/bin"
+
+    # 获取脚本的基本文件名，例如 main.sh
+    SCRIPT_NAME=$(basename "$SCRIPT_PATH")
+
+    # 创建符号链接到目标目录
+    if [ ! -f "$TARGET_DIR/$SCRIPT_NAME" ]; then
+        sudo ln -s "$SCRIPT_PATH" "$TARGET_DIR/$SCRIPT_NAME"
+        echo "已创建符号链接：$TARGET_DIR/$SCRIPT_NAME"
+    else
+        echo "目标目录已有同名文件，跳过创建符号链接"
+    fi
+
+    # 确保脚本具有可执行权限
+    sudo chmod +x "$SCRIPT_PATH"
+    echo "已确保脚本具有可执行权限：$SCRIPT_PATH"
+
+    # 可选：为 'kk' 创建一个别名，前提是你希望通过 'kk' 来执行该脚本
+    echo "alias kk='$TARGET_DIR/$SCRIPT_NAME'" >> ~/.bashrc
+    echo "已在 ~/.bashrc 中添加 alias kk='$TARGET_DIR/$SCRIPT_NAME'"
+
+    # 提示用户重新加载配置
+    source ~/.bashrc
+}
+
+xxxxx
+
+
+
+
 # === 模块函数 === #此函数暂时不使用,因为看着不错先放这
 load_modules() {
     # 加载依赖脚本 #通过函数触发顺序
@@ -192,9 +231,12 @@ kejilion_update() {
                 chmod +x "$DOWNLOAD_DIR/main.sh"
 
                 # 备份当前脚本
-                if [ -f "/usr/local/bin/k" ]; then
-                    cp /usr/local/bin/k /usr/local/bin/k.bak
+                if [ -f "/usr/local/bin/kk" ]; then
+                    cp /usr/local/bin/kk /usr/local/bin/kk.bak
                 fi
+
+             
+
 
                 # 覆盖当前脚本
                 if cp -f "$DOWNLOAD_DIR/main.sh" /usr/local/bin/kk; then
@@ -207,10 +249,10 @@ kejilion_update() {
                     # 使用 exec 重新执行脚本，替代当前进程
                     exec /usr/local/bin/kk
                 else
-                    echo "更新失败，无法写入 /usr/local/bin/k。"
-                    if [ -f "/usr/local/bin/k.bak" ]; then
+                    echo "更新失败，无法写入 /usr/local/bin/kk。"
+                    if [ -f "/usr/local/bin/kk.bak" ]; then
                         echo "已恢复备份。"
-                        cp /usr/local/bin/k.bak /usr/local/bin/k
+                        cp /usr/local/bin/kk.bak /usr/local/bin/kk
                     fi
                     exit 1
                 fi
