@@ -243,7 +243,14 @@ kejilion_update() {
 
                 # 先创建一个临时目录用于下载更新文件
                 local temp_dir="/tmp/kejilion_update"
-                mkdir -p "$temp_dir"
+                # 如果临时目录已经存在文件，先清空它
+                if [ -d "$temp_dir" ]; then
+                    echo "临时目录 $temp_dir 存在，正在清空..."
+                    rm -rf "$temp_dir"/*
+                else
+                    # 如果临时目录不存在，创建它
+                    mkdir -p "$temp_dir"
+                fi
 
                 # 下载所有依赖文件到临时目录
                 echo "开始下载所有依赖文件到临时目录 $temp_dir..."
