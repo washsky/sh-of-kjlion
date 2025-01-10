@@ -96,9 +96,11 @@ sh_v=$(echo "$version_format" | sed "s/{major}/$major/" | sed "s/{minor}/$minor/
 
 washsky_add_kk(){
     # 检查脚本文件是否存在
+    log "检查脚本文件是否存在"
     SCRIPT_PATH="$DOWNLOAD_DIR/main.sh"
     if [ ! -f "$SCRIPT_PATH" ]; then
         echo "脚本文件不存在: $SCRIPT_PATH"
+        log "检查脚本文件存在退出"
         exit 1
     fi
 
@@ -112,13 +114,18 @@ washsky_add_kk(){
     if [ ! -f "$TARGET_DIR/$SCRIPT_NAME" ]; then
         sudo ln -s "$SCRIPT_PATH" "$TARGET_DIR/$SCRIPT_NAME"
         echo "已创建符号链接：$TARGET_DIR/$SCRIPT_NAME"
+
+        log "已创建符号链接$TARGET_DIR/$SCRIPT_NAME"
+
     else
         echo "目标目录已有同名文件，跳过创建符号链接"
+        log  "目标目录已有同名文件，跳过创建符号链接"
     fi
 
     # 确保脚本具有可执行权限
     sudo chmod +x "$SCRIPT_PATH"
     echo "已确保脚本具有可执行权限：$SCRIPT_PATH"
+    log "已确保脚本具有可执行权限：$SCRIPT_PATH"
 
     # 可选：为 'kk' 创建一个别名，前提是你希望通过 'kk' 来执行该脚本
     echo "alias kk='$TARGET_DIR/$SCRIPT_NAME'" >> ~/.bashrc
