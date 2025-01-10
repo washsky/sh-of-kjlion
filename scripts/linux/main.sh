@@ -209,7 +209,7 @@ kejilion_update() {
         local_version_format=$(grep '^version_format:' "$local_config_file" | cut -d'"' -f2)
 
         # 构造本地完整版本号
-        local_sh_v=$(echo "$local_version_format" | sed "s/{major}/$local_major/" | sed "s/{minor}/$local_minor/" | sed "s/{patch}/$local_patch/"))
+        local_sh_v=$(echo "$local_version_format" | sed "s/{major}/$local_major/" | sed "s/{minor}/$local_minor/" | sed "s/{patch}/$local_patch/")
     else
         echo "本地配置文件不存在：$local_config_file"
         local_sh_v="0.0.0"  # 假设初始版本为 0.0.0
