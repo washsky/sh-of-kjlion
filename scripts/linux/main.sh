@@ -241,16 +241,19 @@ kejilion_update() {
                     echo "检测到您位于中国，使用代理下载依赖文件..."
                 fi
 
-                # 先创建一个临时目录用于下载更新文件
+
+                # 如果临时目录已经存在文件，先清空它
                 local temp_dir="/tmp/kejilion_update"
+
                 # 如果临时目录已经存在文件，先清空它
                 if [ -d "$temp_dir" ]; then
                     echo "临时目录 $temp_dir 存在，正在清空..."
-                    rm -rf "$temp_dir"/*
-                else
-                    # 如果临时目录不存在，创建它
-                    mkdir -p "$temp_dir"
+                    rm -rf "$temp_dir"  # 删除目录及其内容
                 fi
+
+                # 重新创建临时目录
+                mkdir -p "$temp_dir"
+
 
                 # 下载所有依赖文件到临时目录
                 echo "开始下载所有依赖文件到临时目录 $temp_dir..."
