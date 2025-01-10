@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 把它加入顶部使每次运行都删除它
+rm -rf /tmp/kejilion_update
 
 log_file="/var/log/my_script.log"
 
@@ -245,7 +247,7 @@ kejilion_update() {
                 # 如果临时目录已经存在文件，先清空它
                 local temp_dir="/tmp/kejilion_update"
 
-                # 如果临时目录已经存在文件，先清空它
+                # 测试rm -rf "$temp_dir" 无效,把它加入顶部使每次运行都删除它
                 if [ -d "$temp_dir" ]; then
                     echo "临时目录 $temp_dir 存在，正在清空..."
                     rm -rf "$temp_dir"  # 删除目录及其内容
