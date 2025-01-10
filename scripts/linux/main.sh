@@ -34,7 +34,7 @@ trap cleanup EXIT
 mkdir -p "$DOWNLOAD_DIR"
 
 # 定义 GitHub 代理（如果有）
-gh_proxy="https://ghproxy.com/"  # 根据需要修改
+#gh_proxy="https://ghproxy.com/"  # 根据需要修改
 
 
 # 定义依赖脚本和配置文件的 URL 和文件名
