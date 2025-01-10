@@ -110,17 +110,18 @@ washsky_add_kk(){
     # 获取脚本的基本文件名，例如 main.sh
     SCRIPT_NAME=$(basename "$SCRIPT_PATH")
 
-    # 创建符号链接到目标目录
-    if [ ! -f "$TARGET_DIR/$SCRIPT_NAME" ]; then
-        sudo ln -s "$SCRIPT_PATH" "$TARGET_DIR/$SCRIPT_NAME"
-        echo "已创建符号链接：$TARGET_DIR/$SCRIPT_NAME"
-
-        log "已创建符号链接$TARGET_DIR/$SCRIPT_NAME"
-
-    else
-        echo "目标目录已有同名文件，跳过创建符号链接"
-        log  "目标目录已有同名文件，跳过创建符号链接"
+    # 如果目标目录已有同名文件，先删除它，然后重新创建符号链接
+    if [ -f "$TARGET_DIR/$SCRIPT_NAME" ]; then
+        echo "目标目录已有同名文件，正在删除并重新创建符号链接..."
+        rm -f "$TARGET_DIR/$SCRIPT_NAME"  # 强制删除已有的文件
     fi
+
+    # 创建符号链接到目标目录
+    ln -s "$SCRIPT_PATH" "$TARGET_DIR/$SCRIPT_NAME"
+    echo "已创建符号链接：$TARGET_DIR/$SCRIPT_NAME"
+
+    log "已创建符号链接：$TARGET_DIR/$SCRIPT_NAME"
+
 
     # 确保脚本具有可执行权限
     sudo chmod +x "$SCRIPT_PATH"
