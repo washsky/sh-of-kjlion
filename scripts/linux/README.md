@@ -8,3 +8,9 @@
 bash <(curl -s https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/main.sh)
 ```
 ***
+
+### 一键脚本zsh_setup
+```bash
+bash <(curl -s https://raw.githubusercontent.com/washsky/sh-of-kjlion/washsky-develop/scripts/linux/zsh_setup.sh)
+```
+***
